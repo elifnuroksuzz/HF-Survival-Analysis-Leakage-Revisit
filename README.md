@@ -73,8 +73,4 @@ Bu proje, Colab T4 GPU üzerinde optimize edilmiştir. Derin öğrenme tabanlı 
 
 -----
 
-### Profesyonel Dokunuş İçin Son Adımlar:
-
-1.  **Görseller:** README'ye `03_survival` notebook'undan çıkan bir Kaplan-Meier eğrisi grafiği ile `05_shap` notebook'undan çıkan bir SHAP Summary Plot görselini eklersen (Markdown içinde `![alt text](url)` formatıyla) projenin görsel kalitesi tavan yapar.
-2.  **`utils.py`:** Bu dosyada `set_seed()`, `load_drive()`, `calculate_metrics()` gibi tekrar eden fonksiyonları tuttuğunu README'de de belirtebilirsin.
 
