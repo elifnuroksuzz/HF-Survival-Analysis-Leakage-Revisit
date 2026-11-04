@@ -19,3 +19,6 @@ logs/
 # MIMIC-derived results may contain small cells; review before sharing
 results/tables/mimic_*
 results/figures/fig5_*
+
+# GitHub audit raw downloads (third-party code; never executed)
+data/github_audit/
