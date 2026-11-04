@@ -123,6 +123,9 @@ class DeepSurv(BaseEstimator):
 
     def predict_survival_function(self, X):
         r = np.exp(self.predict(X))
-        x = np.concatenate([[0.0], self.baseline_times_])
-        H = np.concatenate([[0.0], self.cum_baseline_hazard_])
+        # survival is constant after the last event time: extend the domain so
+        # that evaluation grids beyond it are valid
+        far = float(self.baseline_times_[-1]) * 10 + 1e4
+        x = np.concatenate([[0.0], self.baseline_times_, [far]])
+        H = np.concatenate([[0.0], self.cum_baseline_hazard_, [self.cum_baseline_hazard_[-1]]])
         return np.array([StepFunction(x, np.exp(-H * ri)) for ri in r])

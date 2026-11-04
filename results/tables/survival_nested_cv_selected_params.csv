@@ -1,0 +1,46 @@
+split,model,alpha,max_features,min_samples_leaf,learning_rate,max_depth
+0,Cox PH,1.0,,,,
+0,Random survival forest,,0.5,5,,
+0,Gradient-boosted Cox,,,,0.02,2
+1,Cox PH,0.01,,,,
+1,Random survival forest,,0.5,5,,
+1,Gradient-boosted Cox,,,,0.1,1
+2,Cox PH,10.0,,,,
+2,Random survival forest,,0.5,5,,
+2,Gradient-boosted Cox,,,,0.05,1
+3,Cox PH,10.0,,,,
+3,Random survival forest,,0.5,15,,
+3,Gradient-boosted Cox,,,,0.02,1
+4,Cox PH,10.0,,,,
+4,Random survival forest,,0.5,5,,
+4,Gradient-boosted Cox,,,,0.05,1
+5,Cox PH,10.0,,,,
+5,Random survival forest,,sqrt,5,,
+5,Gradient-boosted Cox,,,,0.05,1
+6,Cox PH,10.0,,,,
+6,Random survival forest,,0.5,5,,
+6,Gradient-boosted Cox,,,,0.02,2
+7,Cox PH,10.0,,,,
+7,Random survival forest,,sqrt,5,,
+7,Gradient-boosted Cox,,,,0.05,1
+8,Cox PH,10.0,,,,
+8,Random survival forest,,sqrt,5,,
+8,Gradient-boosted Cox,,,,0.02,1
+9,Cox PH,0.01,,,,
+9,Random survival forest,,sqrt,15,,
+9,Gradient-boosted Cox,,,,0.1,1
+10,Cox PH,10.0,,,,
+10,Random survival forest,,0.5,5,,
+10,Gradient-boosted Cox,,,,0.05,1
+11,Cox PH,0.01,,,,
+11,Random survival forest,,sqrt,5,,
+11,Gradient-boosted Cox,,,,0.1,1
+12,Cox PH,10.0,,,,
+12,Random survival forest,,0.5,5,,
+12,Gradient-boosted Cox,,,,0.02,3
+13,Cox PH,0.1,,,,
+13,Random survival forest,,0.5,5,,
+13,Gradient-boosted Cox,,,,0.05,2
+14,Cox PH,10.0,,,,
+14,Random survival forest,,sqrt,5,,
+14,Gradient-boosted Cox,,,,0.02,2

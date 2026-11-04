@@ -10,5 +10,5 @@ matplotlib==3.11.2
 shap==0.54.1
 pytest
 # Optional
-# torch                      # DeepSurv (--with-deepsurv)
+torch==2.15.0                # DeepSurv (stage "deepsurv")
 # pandas-gbq google-cloud-bigquery db-dtypes pyarrow   # MIMIC-III extraction

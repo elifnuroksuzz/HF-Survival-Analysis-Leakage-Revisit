@@ -1,0 +1,4 @@
+model,reference,metric,mean_diff,ci_low,ci_high,t,p,n_resamples
+DeepSurv,Cox PH,harrell_c,-0.0061,-0.0386,0.0263,-0.3811,0.7048,50
+DeepSurv,Cox PH,uno_c,-0.0092,-0.0395,0.0211,-0.6119,0.5434,50
+DeepSurv,Cox PH,ibs,0.0044,-0.0107,0.0195,0.5871,0.5599,50

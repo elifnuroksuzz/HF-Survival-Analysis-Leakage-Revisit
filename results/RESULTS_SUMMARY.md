@@ -8,6 +8,8 @@ Runs contributing to these tables (append-only history):
 - 2026-11-04T10:35:20 | quick=False | stages=table1,replication,leakage,survival,explain,fairness | MC splits=100 | CV repeats=10
 - 2026-11-04T11:04:00 | quick=False | stages=simulation | MC splits=100 | CV repeats=10
 - 2026-11-04T11:11:07 | quick=False | stages=optimism,export,summary | MC splits=100 | CV repeats=10
+- 2026-11-04T13:07:33 | quick=False | stages=sensitivity | MC splits=100 | CV repeats=10
+- 2026-11-04T13:09:00 | quick=False | stages=deepsurv,summary | MC splits=100 | CV repeats=10
 
 ## Experiment A — follow-up by vital status
 
@@ -100,6 +102,27 @@ Paired comparison vs Cox PH (corrected resampled t-test):
 - ibs: Cox PH (EF + SC) − Cox PH = 0.009 [-0.005, 0.023], p=0.219
 - ibs: Gradient-boosted Cox − Cox PH = 0.001 [-0.013, 0.015], p=0.850
 - ibs: Random survival forest − Cox PH = -0.003 [-0.016, 0.011], p=0.683
+
+DeepSurv (same folds):
+
+- DeepSurv: Harrell C 0.693 [0.580, 0.796], Uno C 0.704, AUC 90 d 0.706, IBS 0.168
+
+Nested CV (tuned hyperparameters; 3x5 outer folds):
+
+- Cox PH (tuned): Harrell C 0.696 [0.565, 0.813], Uno C 0.716, AUC 90 d 0.693, IBS 0.163
+- Random survival forest (tuned): Harrell C 0.715 [0.586, 0.831], Uno C 0.739, AUC 90 d 0.724, IBS 0.156
+- Gradient-boosted Cox (tuned): Harrell C 0.718 [0.587, 0.837], Uno C 0.731, AUC 90 d 0.734, IBS 0.165
+
+- harrell_c: DeepSurv − Cox PH = -0.006 [-0.039, 0.026], p=0.705
+- uno_c: DeepSurv − Cox PH = -0.009 [-0.040, 0.021], p=0.543
+- ibs: DeepSurv − Cox PH = 0.004 [-0.011, 0.019], p=0.560
+
+Piecewise Cox (period-specific effects for non-PH covariates):
+
+- CPK (mcg/L) (per doubling), <= 60 d: HR 1.02 (0.86-1.22), p=0.788
+- CPK (mcg/L) (per doubling), > 60 d: HR 1.15 (0.94-1.41), p=0.165, p interaction 0.378
+- Ejection fraction (%) (per 5 percentage points), <= 60 d: HR 0.89 (0.79-1.00), p=0.055
+- Ejection fraction (%) (per 5 percentage points), > 60 d: HR 0.67 (0.55-0.80), p=<0.001, p interaction 0.007
 
 Bootstrap internal validation (Harrell):
 

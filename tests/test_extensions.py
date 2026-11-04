@@ -59,3 +59,20 @@ def test_simulated_cohort_matches_event_rate():
                           target_event_rate=0.32)
     assert abs(sim[C.EVENT].mean() - 0.32) < 0.02
     assert sim[C.TIME].max() <= df[C.TIME].max() + 1
+
+
+def test_deepsurv_survival_function_covers_evaluation_grid():
+    pytest.importorskip("torch")
+    from hfrevisit.data import to_structured
+    from hfrevisit.deepsurv import DeepSurv
+
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(120, 3))
+    t = rng.exponential(np.exp(-X[:, 0]) * 100) + 1
+    y = to_structured(np.minimum(t, 150), t < 150)
+    m = DeepSurv(max_epochs=50, patience=10).fit(X, y)
+    fns = m.predict_survival_function(X[:5])
+    vals = np.array([fn(np.array([10.0, 240.0])) for fn in fns])  # beyond last event time
+    assert np.all((vals >= 0) & (vals <= 1)) and np.all(vals[:, 1] <= vals[:, 0])
+    from sksurv.metrics import concordance_index_censored
+    assert concordance_index_censored(y["event"], y["time"], m.predict(X))[0] > 0.6

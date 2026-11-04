@@ -9,6 +9,7 @@ Stages (run all by default):
   explain      Out-of-fold permutation importance and SHAP
   fairness     Subgroup C-index on out-of-fold risk
   optimism     Bootstrap optimism-corrected C and calibration slope (Harrell)
+  deepsurv     DeepSurv on the same CV folds as the other models (needs torch)
   sensitivity  Piecewise Cox for non-PH covariates; nested-CV hyperparameter tuning
   simulation   Simulation study: leakage from `time` is structural (null effects)
   export       Fit final models on the full cohort for external validation
@@ -42,7 +43,7 @@ from hfrevisit.reporting import save_table, write_run_log  # noqa: E402
 from hfrevisit.stats import corrected_resampled_ttest, table_one  # noqa: E402
 
 STAGES = ["table1", "replication", "leakage", "survival", "explain", "fairness", "optimism",
-          "sensitivity", "simulation", "export", "summary"]
+          "deepsurv", "sensitivity", "simulation", "export", "summary"]
 
 
 def main(argv=None) -> None:
@@ -196,6 +197,23 @@ def main(argv=None) -> None:
         opt = survival.bootstrap_optimism(df, n_boot=50 if args.quick else 200)
         save_table(opt, "survival_bootstrap_optimism", T)
         print("[optimism] done")
+
+    if "deepsurv" in args.stages:
+        from sklearn.pipeline import Pipeline
+
+        from hfrevisit.deepsurv import DeepSurv
+        ds = {"DeepSurv": (C.BASELINE_FEATURES, Pipeline([
+            ("prep", survival.preprocessor(C.BASELINE_FEATURES)), ("model", DeepSurv())]))}
+        dmet, _ = survival.cross_validate(df, ds, n_repeats=n_rep)  # identical folds (same seed)
+        save_table(dmet, "survival_cv_deepsurv_per_fold", T)
+        save_table(survival.summarize_cv(dmet), "survival_cv_deepsurv_summary", T)
+        base = T / "survival_cv_per_fold.csv"
+        if base.exists():
+            both = pd.concat([pd.read_csv(base).query("model == 'Cox PH'"), dmet])
+            save_table(pd.concat([survival.paired_model_comparison(both, metric=m)
+                                  for m in ("harrell_c", "uno_c", "ibs")]),
+                       "survival_paired_comparison_deepsurv", T)
+        print("[deepsurv] done")
 
     if "sensitivity" in args.stages:
         save_table(survival.piecewise_cox(df), "table_s_piecewise_cox", T)

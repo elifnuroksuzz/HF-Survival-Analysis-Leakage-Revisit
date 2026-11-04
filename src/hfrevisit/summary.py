@@ -137,6 +137,30 @@ def write_summary(P: Paths) -> str:
                      f"[{_f(r.ci_low)}, {_f(r.ci_high)}], p={_p(r.p)}")
         L.append("")
 
+    for name, title in [("survival_cv_deepsurv_summary", "DeepSurv (same folds)"),
+                        ("survival_nested_cv_summary", "Nested CV (tuned hyperparameters; 3x5 outer folds)")]:
+        t = _read(P, name)
+        if t is not None:
+            L += [f"{title}:", ""]
+            for _, r in t.iterrows():
+                L.append(f"- {r['model']}: Harrell C {_f(r['harrell_c'])} [{_f(r['harrell_c_p2.5'])}, "
+                         f"{_f(r['harrell_c_p97.5'])}], Uno C {_f(r['uno_c'])}, AUC 90 d {_f(r.get('auc_90d'))}, "
+                         f"IBS {_f(r.get('ibs'))}")
+            L.append("")
+    pd_ = _read(P, "survival_paired_comparison_deepsurv")
+    if pd_ is not None:
+        for _, r in pd_.iterrows():
+            L.append(f"- {r['metric']}: DeepSurv − Cox PH = {_f(r.mean_diff)} [{_f(r.ci_low)}, {_f(r.ci_high)}], p={_p(r.p)}")
+        L.append("")
+    pw = _read(P, "table_s_piecewise_cox")
+    if pw is not None:
+        L += ["Piecewise Cox (period-specific effects for non-PH covariates):", ""]
+        for _, r in pw[pw["period"] != "all"].iterrows():
+            extra = f", p interaction {_p(r['p_interaction'])}" if pd.notna(r.get("p_interaction")) else ""
+            L.append(f"- {r['variable']} ({r['unit']}), {r['period']}: HR {r['HR']:.2f} "
+                     f"({r['CI_low']:.2f}-{r['CI_high']:.2f}), p={_p(r['p'])}{extra}")
+        L.append("")
+
     bo = _read(P, "survival_bootstrap_optimism")
     if bo is not None:
         L += ["Bootstrap internal validation (Harrell):", ""]
