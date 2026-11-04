@@ -51,8 +51,10 @@ def make_classifiers(seed: int = C.RANDOM_SEED) -> dict[str, Pipeline]:
         "SVM (linear)": scaled(SVC(kernel="linear", random_state=seed)),
         "SVM (RBF)": scaled(SVC(kernel="rbf", gamma="scale", random_state=seed)),
         "k-nearest neighbours": scaled(KNeighborsClassifier(n_neighbors=5)),
-        "Neural network (MLP)": scaled(MLPClassifier(hidden_layer_sizes=(100,), max_iter=2000,
-                                                     early_stopping=True, random_state=seed)),
+        # No early stopping: with ~210 training patients a 10 % validation split
+        # (~21 patients) makes the stopping rule degenerate. L2 penalty instead.
+        "Neural network (MLP)": scaled(MLPClassifier(hidden_layer_sizes=(100,), alpha=1e-2,
+                                                     max_iter=3000, random_state=seed)),
     }
 
 
