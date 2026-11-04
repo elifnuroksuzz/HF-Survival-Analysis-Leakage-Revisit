@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hfrevisit"
+version = "1.0.0"
+description = "Target leakage, survival re-analysis and external validation of heart-failure mortality prediction"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "numpy>=1.26",
+    "pandas>=2.1",
+    "scipy>=1.11",
+    "scikit-learn>=1.4",
+    "scikit-survival>=0.22",
+    "lifelines>=0.28",
+    "statsmodels>=0.14",
+    "matplotlib>=3.8",
+    "shap>=0.44",
+]
+
+[project.optional-dependencies]
+deep = ["torch>=2.1"]
+mimic = ["pandas-gbq>=0.20", "google-cloud-bigquery>=3.11", "db-dtypes>=1.1", "pyarrow>=14"]
+dev = ["pytest>=7.4", "nbformat>=5.9"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

@@ -1,0 +1,21 @@
+__pycache__/
+*.pyc
+*.egg-info/
+.ipynb_checkpoints/
+.pytest_cache/
+.venv/
+venv/
+
+# Data: the public CSV is downloaded by the scripts; MIMIC-III extracts must
+# NEVER be committed (PhysioNet Credentialed Data Use Agreement).
+data/*.csv
+data/mimic_cache/
+*.parquet
+
+# Fitted models and logs are re-generated
+models/
+logs/
+
+# MIMIC-derived results may contain small cells; review before sharing
+results/tables/mimic_*
+results/figures/fig5_*

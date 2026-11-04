@@ -1,0 +1,13 @@
+Variable,Statistic,Overall,DEATH_EVENT=0 (n=203),DEATH_EVENT=1 (n=96),p,Test
+Age (years),median [IQR],60.0 [51.0-70.0],60.0 [50.0-65.0],65.0 [55.0-75.0],<0.001,Mann-Whitney U
+CPK (mcg/L),median [IQR],250.0 [116.5-582.0],245.0 [109.0-582.0],259.0 [128.8-582.0],0.684,Mann-Whitney U
+Ejection fraction (%),median [IQR],38.0 [30.0-45.0],38.0 [35.0-45.0],30.0 [25.0-38.0],<0.001,Mann-Whitney U
+Platelets (kiloplatelets/mL),median [IQR],262000.0 [212500.0-303500.0],263000.0 [219500.0-302000.0],258500.0 [197500.0-311000.0],0.426,Mann-Whitney U
+Serum creatinine (mg/dL),median [IQR],1.1 [0.9-1.4],1.0 [0.9-1.2],1.3 [1.1-1.9],<0.001,Mann-Whitney U
+Serum sodium (mEq/L),median [IQR],137.0 [134.0-140.0],137.0 [135.5-140.0],135.5 [133.0-138.2],<0.001,Mann-Whitney U
+Follow-up time (days),median [IQR],115.0 [73.0-203.0],172.0 [95.0-213.0],44.5 [25.5-102.2],<0.001,Mann-Whitney U
+Anaemia,n (%),129 (43.1%),83 (40.9%),46 (47.9%),0.307,Chi-square
+Diabetes,n (%),125 (41.8%),85 (41.9%),40 (41.7%),1.000,Chi-square
+Hypertension,n (%),105 (35.1%),66 (32.5%),39 (40.6%),0.214,Chi-square
+Male sex,n (%),194 (64.9%),132 (65.0%),62 (64.6%),1.000,Chi-square
+Smoking,n (%),96 (32.1%),66 (32.5%),30 (31.2%),0.932,Chi-square

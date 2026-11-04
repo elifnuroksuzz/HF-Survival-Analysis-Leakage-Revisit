@@ -1,0 +1,14 @@
+# Versions used to produce the results in results/ (Python 3.13).
+numpy==2.5.4
+pandas==2.3.3
+scipy==1.18.1
+scikit-learn==1.9.1
+scikit-survival==0.28.0
+lifelines==0.30.3
+statsmodels==0.15.0
+matplotlib==3.11.2
+shap==0.54.1
+pytest
+# Optional
+# torch                      # DeepSurv (--with-deepsurv)
+# pandas-gbq google-cloud-bigquery db-dtypes pyarrow   # MIMIC-III extraction
