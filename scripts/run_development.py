@@ -192,12 +192,12 @@ def main(argv=None) -> None:
         print("[fairness] done")
 
     if "optimism" in args.stages:
-        opt = survival.bootstrap_optimism(df, n_boot=50 if args.quick else 500)
+        opt = survival.bootstrap_optimism(df, n_boot=50 if args.quick else 200)
         save_table(opt, "survival_bootstrap_optimism", T)
         print("[optimism] done")
 
     if "simulation" in args.stages:
-        sim = simulation.run_simulation(df, n_sim=20 if args.quick else 200)
+        sim = simulation.run_simulation(df, n_sim=20 if args.quick else 100)
         save_table(sim, "simulation_per_cohort", T)
         save_table(simulation.summarize_simulation(sim), "simulation_summary", T)
         plotting.save(plotting.simulation_plot(sim), "fig_s_simulation_leakage", F)

@@ -70,8 +70,15 @@ def standardized_cox_beta(df: pd.DataFrame) -> np.ndarray:
 def run_simulation(df: pd.DataFrame, n_sim: int = 200, n_folds: int = 5,
                    seed: int = C.RANDOM_SEED, models: dict | None = None) -> pd.DataFrame:
     rng = np.random.default_rng(seed)
-    models = models or {k: v for k, v in make_classifiers(seed).items()
-                        if k in ("Random forest", "Logistic regression")}
+    if models is None:
+        from sklearn.ensemble import RandomForestClassifier
+        from sklearn.pipeline import Pipeline
+        from sklearn.preprocessing import StandardScaler
+        # 200 trees (vs 500 in the main analyses) keeps 2 x n_sim x 5-fold
+        # x 3 feature sets tractable; MCC is insensitive to this choice.
+        models = {"Random forest": Pipeline([("scale", StandardScaler()), ("clf", RandomForestClassifier(
+                      n_estimators=200, random_state=seed, n_jobs=-1))]),
+                  "Logistic regression": make_classifiers(seed)["Logistic regression"]}
     scenarios = {"null (no covariate effect)": np.zeros(len(C.BASELINE_FEATURES)),
                  "observed effects": standardized_cox_beta(df)}
     rate = df[C.EVENT].mean()
