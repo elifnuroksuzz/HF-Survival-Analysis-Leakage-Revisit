@@ -11,6 +11,22 @@
 Bu bir **metodolojik yeniden değerlendirme + dış doğrulama** makalesidir. "Yeni model"
 iddiası yoktur; gücü titizlikten gelir. Hakemler bu yüzden *her* sayıyı sorgulayacaktır.
 
+## 1b. Araştırma soruları ve hipotezler
+
+| RQ | Hipotez | Test eden analiz | Çıktı |
+|---|---|---|---|
+| RQ1 Sızıntı var mı, büyüklüğü ne? | **H1** `time` eklenince MCC belirgin artar. **H1a** Yalnız `time` ≈ tüm değişkenler + `time`. **H1b** `time` karıştırılınca artış kaybolur. | Deney B–D, düzeltilmiş t-testi | `leakage_BCD_*`, Şekil 1 |
+| RQ1' Sızıntı yapısal mı? | **H1c** Hiçbir değişkenin etkisi olmayan simüle kohortlarda da `time` yüksek MCC üretir. | Simülasyon (200 kohort, sıfır ve gözlenen etki) | `simulation_*`, Ek Şekil |
+| RQ2 Sızıntısız gerçek performans? | **H2** Baseline değişkenlerle sağkalım modelleri C ≈ 0.70 ve KM-null'dan daha iyi IBS. | Tekrarlı 5×10 CV | `survival_cv_summary`, Şekil 3 |
+| RQ3 Sade model yeterli mi? | **H3** EF + SC Cox, 11 değişkenli Cox'tan anlamlı farklı değil; esnek modeller (RSF, GB-Cox) Cox'u anlamlı geçmez. | Eşleştirilmiş model karşılaştırması | `survival_paired_comparison` |
+| RQ4 Klinik fayda ve kalibrasyon? | **H4** 90 günlük OOF risk iyi kalibre (O/E ≈ 1) ve makul eşiklerde "herkesi tedavi et"ten yüksek net fayda. | Sansür-uyumlu DCA ve KM kalibrasyonu | `dca_*`, `calibration_oof_*`, Şekil 6 |
+| RQ5 Taşınabilirlik? | **H5** MIMIC-III'te ayırt edicilik kısmen korunur, kalibrasyon bozulur, yeniden kalibrasyon düzeltir. | Dış doğrulama | `mimic_*`, Şekil 5 |
+| RQ6 Adalet? | **H6** Cinsiyet ve yaş alt gruplarında C-index farkı yok (CI'lar örtüşür). | OOF alt grup analizi | `table3_subgroup_cindex` |
+
+Örneklem yeterliliği (Riley ve ark.) ayrıca raporlanır (`sample_size_riley`). Hızlı denemede n_min ≈ 351 > 299 çıktı; bu bir **sınırlılıktır** ve shrinkage beklentisiyle (≈0.87) birlikte dürüstçe yazılmalı.
+
+Makaledeki **tüm sayılar** `results/RESULTS_SUMMARY.md` dosyasından alınmalı. Bu dosya tablolardan otomatik üretilir.
+
 ## 2. Hedef dergi önerileri
 
 | Dergi | İndeks | Uygunluk |
