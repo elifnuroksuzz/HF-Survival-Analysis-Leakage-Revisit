@@ -22,3 +22,6 @@ results/figures/fig5_*
 
 # GitHub audit raw downloads (third-party code; never executed)
 data/github_audit/
+
+# Systematic review downloads (full texts are copyrighted)
+data/systematic_review/fulltext/

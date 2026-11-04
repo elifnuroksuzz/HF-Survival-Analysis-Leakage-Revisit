@@ -1,0 +1,19 @@
+field,definition,allowed_values
+study_id,First author + year,text
+doi,DOI,text
+venue,Journal or conference,text
+indexing,Indexing of the venue at publication,SCIE / SSCI / ESCI / Scopus / none / preprint
+model_families,Models fitted,text
+time_as_predictor,Was follow-up time an input feature for predicting DEATH_EVENT?,yes / no / both / unclear
+time_quote,Quotation and page supporting time_as_predictor,text
+outcome_definition,How the outcome was defined,death indicator / death within horizon / time-to-event
+censoring_handled,Was right-censoring handled?,yes / no
+oversampling,Oversampling used (e.g. SMOTE),yes / no
+oversampling_before_split,Was oversampling applied before the train-test split?,yes / no / unclear / NA
+feature_selection_full_data,Was feature selection done on the full data before validation?,yes / no / unclear
+validation_scheme,Validation,single hold-out / k-fold / repeated / nested / external
+best_accuracy,Best reported accuracy (0-1),number
+best_mcc,Best reported MCC,number
+best_auc,Best reported ROC AUC,number
+code_available,Code publicly available,yes / no
+probast_analysis_domain,PROBAST risk of bias (analysis),low / high / unclear

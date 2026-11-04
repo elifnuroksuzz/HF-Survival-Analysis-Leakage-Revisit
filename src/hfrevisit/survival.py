@@ -287,3 +287,100 @@ def bootstrap_optimism(df: pd.DataFrame, models: dict | None = None, n_boot: int
                      "calibration_slope_p97.5": float(np.percentile(slopes, 97.5)),
                      "n_boot": n_boot})
     return pd.DataFrame(rows)
+
+
+# --------------------------------------------------------------------------
+# Sensitivity analyses
+# --------------------------------------------------------------------------
+def piecewise_cox(df: pd.DataFrame, split_day: float = 60.0,
+                  time_varying: tuple[str, ...] = ("ejection_fraction", "creatinine_phosphokinase"),
+                  ) -> pd.DataFrame:
+    """Cox model with period-specific effects for covariates that violate PH.
+
+    Follow-up is split at ``split_day`` (episode format); the effect of each
+    variable in ``time_varying`` is estimated separately before and after the
+    split. Other covariates keep a single (proportional) effect.
+    """
+    from lifelines import CoxTimeVaryingFitter
+
+    base = pd.DataFrame(index=df.index)
+    units = {}
+    for f in C.BASELINE_FEATURES:
+        if f in HR_SCALING:
+            units[f], fn = HR_SCALING[f]
+            base[f] = fn(df[f].astype(float))
+        else:
+            units[f] = "yes vs no" if f != "sex" else "male vs female"
+            base[f] = df[f].astype(float)
+    t, e = df[C.TIME].values, df[C.EVENT].values
+    rows = []
+    for i in range(len(df)):
+        x = base.iloc[i].to_dict()
+        rows.append({"id": i, "start": 0.0, "stop": min(t[i], split_day),
+                     "event": int(e[i] == 1 and t[i] <= split_day), "late": 0, **x})
+        if t[i] > split_day:
+            rows.append({"id": i, "start": split_day, "stop": t[i], "event": int(e[i]), "late": 1, **x})
+    ep = pd.DataFrame(rows)
+    for f in time_varying:
+        ep[f"{f}__late"] = ep[f] * ep["late"]
+    ep = ep.drop(columns="late")
+    ctv = CoxTimeVaryingFitter().fit(ep, id_col="id", event_col="event", start_col="start", stop_col="stop")
+    s = ctv.summary
+    names = ctv.params_.index
+    cov = pd.DataFrame(np.asarray(ctv.variance_matrix_), index=names, columns=names)
+    out = []
+    for f in C.BASELINE_FEATURES:
+        b = s.loc[f, "coef"]
+        if f in time_varying:
+            bl = b + s.loc[f"{f}__late", "coef"]
+            se_l = float(np.sqrt(cov.loc[f, f] + cov.loc[f"{f}__late", f"{f}__late"]
+                                 + 2 * cov.loc[f, f"{f}__late"]))
+            out.append({"variable": C.FEATURE_LABELS.get(f, f), "unit": units[f],
+                        "period": f"<= {split_day:g} d", "HR": np.exp(b),
+                        "CI_low": np.exp(b - 1.96 * s.loc[f, "se(coef)"]),
+                        "CI_high": np.exp(b + 1.96 * s.loc[f, "se(coef)"]), "p": s.loc[f, "p"]})
+            from scipy.stats import norm
+            out.append({"variable": C.FEATURE_LABELS.get(f, f), "unit": units[f],
+                        "period": f"> {split_day:g} d", "HR": np.exp(bl),
+                        "CI_low": np.exp(bl - 1.96 * se_l), "CI_high": np.exp(bl + 1.96 * se_l),
+                        "p": float(2 * norm.sf(abs(bl / se_l))),
+                        "p_interaction": s.loc[f"{f}__late", "p"]})
+        else:
+            out.append({"variable": C.FEATURE_LABELS.get(f, f), "unit": units[f], "period": "all",
+                        "HR": np.exp(b), "CI_low": np.exp(b - 1.96 * s.loc[f, "se(coef)"]),
+                        "CI_high": np.exp(b + 1.96 * s.loc[f, "se(coef)"]), "p": s.loc[f, "p"]})
+    return pd.DataFrame(out)
+
+
+TUNING_GRIDS = {
+    "Cox PH": {"model__alpha": [0.01, 0.1, 1.0, 10.0]},
+    "Random survival forest": {"model__min_samples_leaf": [5, 15, 30],
+                               "model__max_features": ["sqrt", 0.5]},
+    "Gradient-boosted Cox": {"model__learning_rate": [0.02, 0.05, 0.1],
+                             "model__max_depth": [1, 2, 3]},
+}
+
+
+def nested_cv(df: pd.DataFrame, n_outer: int = 5, n_repeats: int = 3, n_inner: int = 3,
+              seed: int = C.RANDOM_SEED) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Nested CV: hyperparameters tuned by inner CV (Harrell's C), performance
+    measured on outer folds. Returns per-fold metrics and selected parameters."""
+    from sklearn.model_selection import GridSearchCV, StratifiedKFold
+
+    y = survival_target(df)
+    base = make_survival_models(seed)
+    outer = RepeatedStratifiedKFold(n_splits=n_outer, n_repeats=n_repeats, random_state=seed)
+    rows, chosen = [], []
+    for k, (tr, te) in enumerate(outer.split(np.zeros(len(df)), df[C.EVENT].values)):
+        inner = list(StratifiedKFold(n_inner, shuffle=True, random_state=seed + k)
+                     .split(np.zeros(len(tr)), df[C.EVENT].values[tr]))
+        for name, grid in TUNING_GRIDS.items():
+            feats, tmpl = base[name]
+            X = df[feats]
+            gs = GridSearchCV(clone(tmpl), grid, cv=inner, n_jobs=1, refit=True)
+            gs.fit(X.iloc[tr], y[tr])
+            met = evaluate_fold(gs.best_estimator_, X.iloc[te], y[tr], y[te])
+            rows.append({"repeat": k // n_outer, "fold": k % n_outer, "model": f"{name} (tuned)", **met})
+            chosen.append({"split": k, "model": name, **{p.replace("model__", ""): str(v)
+                                                       for p, v in gs.best_params_.items()}})
+    return pd.DataFrame(rows), pd.DataFrame(chosen)
