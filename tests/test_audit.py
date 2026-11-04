@@ -20,6 +20,12 @@ spec.loader.exec_module(audit)
     ("cph = CoxPHFitter()\ncph.fit(df, duration_col='time', event_col='DEATH_EVENT')", "survival"),
     ("X = df.drop('DEATH_EVENT', axis=1)\nclf.fit(X, y)\nX2 = df.drop(['DEATH_EVENT','time'], axis=1)\nclf.fit(X2, y)", "both"),
     ("df.describe()\nsns.heatmap(df.corr())", "no_model"),
+    ("mod = smf.logit(formula='DEATH_EVENT ~ age + serum_creatinine', data=df)\nres = mod.fit()", "time_excluded"),
+    ("mod = smf.logit(formula='DEATH_EVENT ~ age + time', data=df)\nres = mod.fit()", "time_used"),
+    ("X = df.drop(['DEATH_EVENT', 'platelets'], axis=1)\nclf.fit(X, y)", "time_used"),
+    ("target = 'DEATH_EVENT'\nX = data.drop(columns=[target])\nclf.fit(X, y)", "time_used"),
+    ("X = df.iloc[:,0:11]\nclf.fit(X, y)", "time_excluded"),
+    ("X = df[['age','ejection_fraction','serum_sodium','serum_creatinine']]\nclf.fit(X, y)", "time_excluded"),
     ("# X = df.drop('DEATH_EVENT', axis=1)\nX = df[cols]\nclf.fit(X, y)", "unclear"),
 ])
 def test_classify_rules(code, label):

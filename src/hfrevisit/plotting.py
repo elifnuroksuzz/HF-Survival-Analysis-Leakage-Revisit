@@ -212,3 +212,28 @@ def simulation_plot(res: pd.DataFrame, model: str = "Random forest"):
     np.atleast_1d(axes)[0].set_ylabel(f"MCC ({model}, {res['sim'].nunique()} cohorts)")
     fig.tight_layout()
     return fig
+
+
+def github_audit_plot(summary: pd.DataFrame):
+    """Share of public repositories by how follow-up time is used."""
+    order = [("time_used", "Time used as predictor"), ("both", "With and without time"),
+             ("time_excluded", "Time excluded"), ("survival", "Survival analysis"),
+             ("unclear", "Feature set unresolved")]
+    s = summary.set_index("category")
+    fig, ax = plt.subplots(figsize=(5.2, 2.4))
+    y = np.arange(len(order))[::-1]
+    vals = [100 * s.loc[k, "share_of_modelling_repos"] for k, _ in order]
+    lo = [100 * s.loc[k, "ci_low"] for k, _ in order]
+    hi = [100 * s.loc[k, "ci_high"] for k, _ in order]
+    colors = [OKABE_ITO[1], OKABE_ITO[4], OKABE_ITO[0], OKABE_ITO[2], "grey"]
+    ax.barh(y, vals, color=colors, alpha=0.85)
+    ax.errorbar(vals, y, xerr=[np.subtract(vals, lo), np.subtract(hi, vals)], fmt="none",
+                ecolor="black", elinewidth=0.8, capsize=2)
+    for yi, v, h, (k, _) in zip(y, vals, hi, order):
+        ax.text(h + 1.5, yi, f"{v:.1f}% (n={int(s.loc[k, 'n_repos'])})", va="center", fontsize=7)
+    ax.set_yticks(y, [lab for _, lab in order])
+    ax.set_xlim(0, 100)
+    n = int(s["n_modelling_repos"].iloc[0])
+    ax.set_xlabel(f"Share of public GitHub repositories fitting a model (n = {n}), 95% CI")
+    fig.tight_layout()
+    return fig

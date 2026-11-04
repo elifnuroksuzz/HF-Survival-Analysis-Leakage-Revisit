@@ -1,0 +1,71 @@
+repo,sample,manual_label,note
+hellpwworld/Mini-school-project,development (rules refined on it),time_used,X = drop('DEATH_EVENT')
+KamilPrzyczynek/Studia,development (rules refined on it),time_used,X = drop('DEATH_EVENT')
+Yian-Yao/Data-Science-Python,development (rules refined on it),unclear,regression between labs; no death model
+atulkahatecdac/ml,development (rules refined on it),time_used,PCA on all features incl. time
+joaorcmr/aps_alglin_2025,development (rules refined on it),time_used,X = drop('DEATH_EVENT')
+Siga-Melon/Second,development (rules refined on it),survival,Cox/KM/RSF with duration = time
+DaNaRim/dut_ai,development (rules refined on it),time_used,explicit list incl. time
+DharmeshHub/CapstoneProject,development (rules refined on it),time_used,explicit 12-variable list incl. time
+Jakhongir0103/Applied-Data-Analysis_EPFL,development (rules refined on it),time_excluded,logit formula without time
+anwarjah/repo1,development (rules refined on it),time_used,"iloc[:, :-1]"
+aranaea/CS-7641-Proj1,development (rules refined on it),time_used,"iloc[:, :-1] on HF data"
+vidarr1412/Classification-and-Regression-Model-Hyper-Parameter-Tuning,development (rules refined on it),time_used,X = drop('DEATH_EVENT')
+DawoodTahir505/Logistic-Regression,development (rules refined on it),time_used,X = drop('DEATH_EVENT')
+epfl-ada/2024,development (rules refined on it),time_excluded,logit formula without time
+OArbili/TTTS,development (rules refined on it),time_used,"iloc[:, :-1] on HF data"
+Dustmamat/AppliedDataAnalysis,development (rules refined on it),time_excluded,logit formula without time
+harshitaSatija/17th-frontend-batch,development (rules refined on it),time_used,X = drop('DEATH_EVENT')
+AnnCzar/statistical-analysis-project,development (rules refined on it),survival,Kaplan-Meier only
+nabila89-ai/Klasifikasi-Ikan-Skripsi,development (rules refined on it),time_used,drops labs but keeps time
+HerouFenix/cdados-project,development (rules refined on it),time_used,pop('DEATH_EVENT'); rest incl. time
+cepdnaclk/e18-6sp-ML-based-patient-care-diagnostic,development (rules refined on it),time_used,X = drop(['DEATH_EVENT'])
+epfl-ada/2021,development (rules refined on it),time_excluded,logit formula without time
+SebasUPC/ML,development (rules refined on it),time_used,drop(columns=['DEATH_EVENT'])
+indrawanagung/heart-failure-prediction,development (rules refined on it),time_used,drop(columns='DEATH_EVENT'); time one-hot encoded
+NickDiNapoli/pytorch-playground,development (rules refined on it),time_used,"iloc[:, :-1]"
+Priya-Yanamandra/mAIstro,development (rules refined on it),unclear,agent tooling; no death model resolved
+Yash-3-bit/Heart_Failure_Prediction,development (rules refined on it),time_used,X = drop('DEATH_EVENT')
+ArshiaIlaty/PsyGenTAB,development (rules refined on it),unclear,synthetic-data fidelity code
+Richi9PP/ACT,development (rules refined on it),survival,KM / Nelson-Aalen / log-rank only
+azhang-12/heart-failure-risk,development (rules refined on it),time_excluded,RF without time; Cox with time as duration
+arthurpeter/Machine_Learning,development (rules refined on it),time_used,reduced variable list incl. time
+Shreeharinadig/Heart-Attack-Prediction-System,development (rules refined on it),time_used,"iloc[:, :-1]"
+Bhabhatunde/Projects_August_24,development (rules refined on it),time_used,X = drop('DEATH_EVENT')
+Chacarerin/machine_learning_bootcamp,development (rules refined on it),unclear,generic target detection; other dataset
+fordanic/cmiv-ai-course,development (rules refined on it),time_excluded,"drop(['DEATH_EVENT','time'])"
+Mohamedreda333-crypto/advanced_machine_learning,development (rules refined on it),time_used,X = drop('DEATH_EVENT')
+bolual11/Heart-Disease-Mortality-Prediction-Model,development (rules refined on it),time_excluded,"drop(columns=['time','DEATH_EVENT'])"
+GantyadaRohith/Medical-Clinical-Diagnostic-Pipeline-with-Leakage-Prevention,development (rules refined on it),time_used,numeric columns incl. time (repo is about leakage prevention)
+AbdelrahmanSalem556/Data_Science,development (rules refined on it),time_used,drop(columns=['DEATH_EVENT'])
+rishikeshwaghela/ASTERIOD-PREDICTION,development (rules refined on it),time_used,X = drop('DEATH_EVENT')
+Peter0010alt/neural-network-comparison,independent (rules frozen),time_used,"iloc[:, :-1] on HF data"
+anapaula165/HeartFailureRegressaoLogistica,independent (rules frozen),time_used,logit formula with time
+tejastro123/ML,independent (rules frozen),time_used,drop('DEATH_EVENT')
+AkashKumbhar22/heart_disease_model,independent (rules frozen),unclear,model trained on another dataset; HF file only scored
+ZohaiibAli/Heart-Failure-Dataset,independent (rules frozen),time_used,drop('DEATH_EVENT') -> train_test_split -> fit
+yazeedalahmadi/Heart,independent (rules frozen),time_used,feature list incl. time
+tobeore/heart_failure_clinical,independent (rules frozen),time_used,drop + list incl. time
+Shashank-Rathod/Data-Science,independent (rules frozen),time_used,drop(columns=['DEATH_EVENT'])
+iSidd2002/Heart-Failure-Prediction,independent (rules frozen),time_used,synthetic copy incl. time
+clong35/ProjectMilestone,independent (rules frozen),time_used,drop('DEATH_EVENT')
+alliemkim/ds-3001,independent (rules frozen),unclear,other dataset (price)
+sujitsilas/ml-heart-failure-prediction,independent (rules frozen),time_used,"iloc[:, :-1]"
+LIMDANBI/SKTFLYAI,independent (rules frozen),time_used,drop('DEATH_EVENT')
+MikeySharma/machine-learning,independent (rules frozen),time_used,"iloc[:, :-1]"
+shreyshah117/Heart-Failure-Prediction,independent (rules frozen),time_used,feature list incl. time
+Kirersays1/AI-Healthcare,independent (rules frozen),time_used,drop('DEATH_EVENT')
+epfl-ada/2022,independent (rules frozen),time_excluded,logit formula without time
+jmanuelascacibar/dsjournal,independent (rules frozen),time_used,drop('DEATH_EVENT')
+madhurprash/SageMaker-ML-Projects,independent (rules frozen),unclear,feature store demo
+Maahi-w-tech/heart-failure-risk-dashboard,independent (rules frozen),time_used,drop(columns=target)
+vladgcs/Reconocimiento_patrones_2025,independent (rules frozen),time_used,drop('DEATH_EVENT')
+SandeepDasarathanKumanan/Heart_disease_using_Simple_Deep_Learning,independent (rules frozen),time_used,"df[:, 0:12] includes time (missed by rules)"
+pascal-1302/AMLHC_Tasks_LAPA,independent (rules frozen),time_excluded,"drop(['DEATH_EVENT','time'])"
+Ancientluck/ML_projects,independent (rules frozen),time_used,drop('DEATH_EVENT')
+kAleks12/SADM,independent (rules frozen),time_excluded,KM + logistic without time
+abdelneuhaus/deep-learning-course,independent (rules frozen),time_used,feature list incl. time
+SamadhanRamesh1234/ML-CAS70,independent (rules frozen),time_used,drop('DEATH_EVENT')
+abisola-joy/Heart-Failure-Prediction,independent (rules frozen),time_used,drop('DEATH_EVENT')
+uzzielaslam05-maker/Assignments,independent (rules frozen),time_used,drop('DEATH_EVENT')
+HuyVang2004/deep_learning_theory,independent (rules frozen),time_used,drop(columns='DEATH_EVENT')

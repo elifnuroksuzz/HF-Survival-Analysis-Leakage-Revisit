@@ -24,6 +24,7 @@ snapshot date is recorded in the output.
 
   python scripts/audit_github.py collect      # search + download (rate-limited)
   python scripts/audit_github.py classify     # rules -> results/tables/github_audit_*.csv
+  python scripts/audit_github.py verify       # agreement with manual labels
 """
 
 from __future__ import annotations
@@ -33,6 +34,7 @@ import datetime as dt
 import json
 import re
 import subprocess
+import urllib.parse
 import sys
 import time
 from pathlib import Path
@@ -96,6 +98,8 @@ def download(idx: pd.DataFrame) -> None:
         # public raw file at the commit referenced by the search hit
         raw_url = r.html_url.replace("https://github.com/", "https://raw.githubusercontent.com/", 1)
         raw_url = raw_url.replace("/blob/", "/", 1)
+        head, _, rest = raw_url.partition("raw.githubusercontent.com/")
+        raw_url = head + "raw.githubusercontent.com/" + urllib.parse.quote(urllib.parse.unquote(rest))
         res = subprocess.run(["curl", "-fsSL", "--max-time", "60", "-o", str(f), raw_url],
                              capture_output=True, text=True)
         if res.returncode != 0:
@@ -145,13 +149,69 @@ LIST_WITH_TIME = re.compile(r"\[[^\]\n]*" + Q + r"serum_creatinine" + Q + r"[^\]
                             r"|\[[^\]\n]*" + TIME + r"[^\]\n]*" + Q + r"serum_creatinine" + Q + r"[^\]\n]*\]", re.I)
 
 
+CLIN = ("age", "anaemia", "creatinine_phosphokinase", "diabetes", "ejection_fraction",
+        "high_blood_pressure", "platelets", "serum_creatinine", "serum_sodium", "sex", "smoking")
+DROP_CALL = re.compile(r"drop\(([^)]*)\)", re.S)
+TARGET_VAR = re.compile(r"(\w+)\s*=\s*" + Q + r"DEATH_EVENT" + Q)
+# first 11 columns = the 11 baseline variables (time is column 12)
+ILOC_11 = re.compile(r"iloc\[\s*:\s*,\s*(?:0\s*)?:\s*11\s*\]")
+# X = df[[...]] with an explicit list of clinical variables
+X_LIST = re.compile(r"^\s*(?:X|x|features?|feature_cols|cols|predictors|X_\w+)\s*=\s*(?:\w+\s*\[\s*)?\[([^\]]+)\]", re.M)
+
+
+# statsmodels / patsy formula for the death indicator
+FORMULA = re.compile(r"DEATH_EVENT\s*~\s*([^'\"]+)")
+
+
+def _formula_rules(code: str) -> tuple[bool, bool]:
+    """(formula with time on the right-hand side, formula without time)."""
+    with_t = without_t = False
+    for rhs in FORMULA.findall(code.replace("\\\n", " ")):
+        if re.search(r"\btime\b", rhs):
+            with_t = True
+        else:
+            without_t = True
+    return with_t, without_t
+
+
+def _drop_rules(code: str) -> tuple[bool, bool]:
+    """(drops target but keeps time, drops time) from every drop(...) call."""
+    targets = set(TARGET_VAR.findall(code))
+    keeps_time = drops_time = False
+    for args in DROP_CALL.findall(code):
+        has_target = "DEATH_EVENT" in args or any(re.search(rf"\b{t}\b", args) for t in targets)
+        has_time = re.search(TIME, args) is not None
+        if has_target and not has_time:
+            keeps_time = True
+        if has_time:
+            drops_time = True
+    return keeps_time, drops_time
+
+
+def _explicit_lists(code: str) -> tuple[bool, bool]:
+    """(explicit feature list with time, explicit clinical list without time)."""
+    with_t = without_t = False
+    for body in X_LIST.findall(code):
+        n_clin = sum(f"'{c}'" in body or f'"{c}"' in body for c in CLIN)
+        if n_clin >= 2:
+            if re.search(TIME, body):
+                with_t = True
+            else:
+                without_t = True
+    return with_t, without_t
+
+
 def classify(code: str) -> dict:
     code = strip_comments(code)
     has_fit = bool(FIT.search(code))
     surv = bool(SURV.search(code))
-    excl = bool(EXCL.search(code))
-    allx = bool(ALLX.search(code))
-    lst = bool(LIST_WITH_TIME.search(code))
+    keeps_time, drops_time = _drop_rules(code)
+    list_t, list_no_t = _explicit_lists(code)
+    form_t, form_no_t = _formula_rules(code)
+    excl = (bool(EXCL.search(code)) or drops_time or bool(ILOC_11.search(code)) or list_no_t
+            or form_no_t)
+    allx = bool(ALLX.search(code)) or keeps_time
+    lst = bool(LIST_WITH_TIME.search(code)) or list_t or form_t
     used = allx or lst
     if not code.strip():
         label = "unreadable"
@@ -213,6 +273,21 @@ def run_classification(sample_n: int = 40, seed: int = 42) -> None:
     lo, hi = wilson(k_any, n)
     summ.append({"category": "time used as predictor in >=1 analysis", "n_repos": k_any,
                  "share_of_modelling_repos": k_any / n if n else np.nan, "ci_low": lo, "ci_high": hi})
+    # sensitivity: de-duplicate repositories whose deciding file has identical content
+    sha = idx.set_index(["repo", "path"])["sha"]
+    dec = (nf.assign(r=nf["label"].map(rank)).sort_values("r").groupby("repo", as_index=False).first())
+    dec["sha"] = [sha.get((r, p_), np.nan) if not isinstance(sha.get((r, p_)), pd.Series)
+                  else sha.get((r, p_)).iloc[0] for r, p_ in zip(dec["repo"], dec["path"])]
+    dedup = dec[~dec["label"].isin(["no_model", "unreadable"])].drop_duplicates("sha")
+    k_d = int(dedup["label"].isin(["time_used", "both"]).sum())
+    lo_d, hi_d = wilson(k_d, len(dedup))
+    summ.append({"category": "time used as predictor (content-deduplicated)", "n_repos": k_d,
+                 "share_of_modelling_repos": k_d / len(dedup), "ci_low": lo_d, "ci_high": hi_d})
+    resolved = modelling[modelling["label"] != "unclear"]
+    k_r = int(resolved["label"].isin(["time_used", "both"]).sum())
+    lo_r, hi_r = wilson(k_r, len(resolved))
+    summ.append({"category": "time used as predictor (among resolved repos)", "n_repos": k_r,
+                 "share_of_modelling_repos": k_r / len(resolved), "ci_low": lo_r, "ci_high": hi_r})
     out = pd.DataFrame(summ)
     out["n_modelling_repos"] = n
     out["n_repos_total_nonfork"] = repo["repo"].nunique()
@@ -228,13 +303,37 @@ def run_classification(sample_n: int = 40, seed: int = 42) -> None:
     print(f"Manual verification sheet: {CACHE / 'manual_verification_sheet.csv'}")
 
 
+def verify() -> None:
+    """Agreement between rules and manual labels (data/reference/github_audit_manual_labels.csv)."""
+    man = pd.read_csv(ROOT / "data" / "reference" / "github_audit_manual_labels.csv")
+    rep = pd.read_csv(TABLES / "github_audit_repos.csv")[["repo", "label"]]
+    m = man.merge(rep, on="repo", how="left")
+    used = {"time_used", "both"}
+    m["rule_used"] = m["label"].isin(used)
+    m["manual_used"] = m["manual_label"].isin(used)
+    out = []
+    for sample, g in m.groupby("sample", sort=False):
+        tp = int((g.rule_used & g.manual_used).sum()); fp = int((g.rule_used & ~g.manual_used).sum())
+        fn = int((~g.rule_used & g.manual_used).sum()); tn = int((~g.rule_used & ~g.manual_used).sum())
+        lo, hi = wilson(tp + tn, len(g))
+        out.append({"sample": sample, "n": len(g), "exact_label_agreement": float((g.label == g.manual_label).mean()),
+                    "binary_agreement": (tp + tn) / len(g), "binary_agreement_ci_low": lo,
+                    "binary_agreement_ci_high": hi, "ppv_time_used": tp / (tp + fp) if tp + fp else np.nan,
+                    "sensitivity_time_used": tp / (tp + fn) if tp + fn else np.nan,
+                    "npv": tn / (tn + fn) if tn + fn else np.nan, "tp": tp, "fp": fp, "fn": fn, "tn": tn})
+    res = pd.DataFrame(out)
+    res.to_csv(TABLES / "github_audit_verification.csv", index=False)
+    m.to_csv(TABLES / "github_audit_verification_detail.csv", index=False)
+    print(res.round(3).to_string(index=False))
+
+
 def main(argv=None) -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("action", choices=["collect", "classify"])
+    ap.add_argument("action", choices=["collect", "classify", "verify"])
     ap.add_argument("--sample", type=int, default=40)
     a = ap.parse_args(argv)
     TABLES.mkdir(parents=True, exist_ok=True)
-    collect() if a.action == "collect" else run_classification(a.sample)
+    {"collect": collect, "classify": lambda: run_classification(a.sample), "verify": verify}[a.action]()
 
 
 if __name__ == "__main__":

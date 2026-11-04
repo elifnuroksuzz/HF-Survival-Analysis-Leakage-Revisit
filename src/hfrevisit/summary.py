@@ -88,6 +88,36 @@ def write_summary(P: Paths) -> str:
             L.append(f"| {model} | " + " | ".join(_f(v) for v in r.values) + " |")
         L.append("")
 
+    rp = _read(P, "replication_vs_published")
+    if rp is not None:
+        L += ["Comparison with published values (Chicco & Jurman 2020; transcribed, verify):", ""]
+        for _, r in rp.iterrows():
+            pairs = [f"{k} {_f(r[f'{k}_ours'])} vs {_f(r[f'{k}_published'])}"
+                     for k in ("MCC", "F1", "Accuracy", "ROC_AUC") if pd.notna(r.get(f"{k}_published"))]
+            L.append(f"- {r['scenario']} | {r['model']}: ours vs published — " + "; ".join(pairs))
+        L.append("")
+
+    ga = _read(P, "github_audit_summary")
+    if ga is not None:
+        g = ga.set_index("category")
+        L += ["## Audit of public GitHub code using the dataset", "",
+              f"- Snapshot {g['snapshot_utc'].iloc[0]}: {int(g['n_files'].iloc[0])} files, "
+              f"{int(g['n_repos_total_nonfork'].iloc[0])} non-fork repositories, "
+              f"{int(g['n_modelling_repos'].iloc[0])} fitting a model"]
+        for cat in g.index:
+            r = g.loc[cat]
+            L.append(f"- {cat}: {int(r.n_repos)} ({100 * r.share_of_modelling_repos:.1f}%, "
+                     f"95% CI {100 * r.ci_low:.1f}-{100 * r.ci_high:.1f})")
+        gv = _read(P, "github_audit_verification")
+        if gv is not None:
+            for _, r in gv.iterrows():
+                L.append(f"- Manual verification, {r['sample']} sample (n={int(r.n)}): binary agreement "
+                         f"{100 * r.binary_agreement:.1f}% (95% CI {100 * r.binary_agreement_ci_low:.1f}-"
+                         f"{100 * r.binary_agreement_ci_high:.1f}), PPV {100 * r.ppv_time_used:.1f}%, "
+                         f"sensitivity {100 * r.sensitivity_time_used:.1f}%, exact-label agreement "
+                         f"{100 * r.exact_label_agreement:.1f}%")
+        L.append("")
+
     sv = _read(P, "survival_cv_summary")
     if sv is not None:
         L += ["## Survival models — repeated 5-fold CV (mean [2.5-97.5 pct over folds])", "",

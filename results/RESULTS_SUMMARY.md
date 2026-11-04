@@ -61,6 +61,25 @@ Runs contributing to these tables (append-only history):
 | Naive Bayes | 0.427 | 0.227 | 0.236 |
 | k-nearest neighbours | 0.342 | 0.183 | 0.391 |
 
+Comparison with published values (Chicco & Jurman 2020; transcribed, verify):
+
+- S2: baseline features | Random forest: ours vs published — MCC 0.358 vs 0.384; F1 0.520 vs 0.547; Accuracy 0.735 vs 0.740; ROC_AUC 0.786 vs 0.800
+- S3: EF + serum creatinine | Random forest: ours vs published — MCC 0.407 vs 0.418
+
+## Audit of public GitHub code using the dataset
+
+- Snapshot 2026-11-04T12:37:26+00:00: 1579 files, 979 non-fork repositories, 729 fitting a model
+- time_used: 459 (63.0%, 95% CI 59.4-66.4)
+- both: 38 (5.2%, 95% CI 3.8-7.1)
+- time_excluded: 64 (8.8%, 95% CI 6.9-11.1)
+- survival: 8 (1.1%, 95% CI 0.6-2.2)
+- unclear: 160 (21.9%, 95% CI 19.1-25.1)
+- time used as predictor in >=1 analysis: 497 (68.2%, 95% CI 64.7-71.5)
+- time used as predictor (content-deduplicated): 467 (68.9%, 95% CI 65.3-72.2)
+- time used as predictor (among resolved repos): 497 (87.3%, 95% CI 84.4-89.8)
+- Manual verification, development (rules refined on it) sample (n=40): binary agreement 100.0% (95% CI 91.2-100.0), PPV 100.0%, sensitivity 100.0%, exact-label agreement 95.0%
+- Manual verification, independent (rules frozen) sample (n=30): binary agreement 93.3% (95% CI 78.7-98.2), PPV 95.8%, sensitivity 95.8%, exact-label agreement 93.3%
+
 ## Survival models — repeated 5-fold CV (mean [2.5-97.5 pct over folds])
 
 | Model | Harrell C | Uno C | AUC 90 d | AUC 180 d | Brier 90 d | IBS (KM null) |

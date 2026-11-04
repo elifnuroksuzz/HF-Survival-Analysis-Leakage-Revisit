@@ -1,0 +1,3 @@
+scenario,model,source,MCC_published,MCC_ours,F1_published,F1_ours,Accuracy_published,Accuracy_ours,TPR_published,TPR_ours,TNR_published,TNR_ours,PR_AUC_published,PR_AUC_ours,ROC_AUC_published,ROC_AUC_ours
+S2: baseline features,Random forest,"Chicco & Jurman 2020, Table 4 (follow-up time excluded)",0.384,0.358,0.547,0.520,0.740,0.735,0.491,0.453,0.864,0.870,0.657,0.636,0.800,0.786
+S3: EF + serum creatinine,Random forest,"Chicco & Jurman 2020, Table 9 (MCC only; other columns to verify)",0.418,0.407,,0.587,,0.744,,0.568,,0.828,,0.664,,0.800

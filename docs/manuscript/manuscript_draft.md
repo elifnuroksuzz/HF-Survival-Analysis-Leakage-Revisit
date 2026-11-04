@@ -1,246 +1,323 @@
 ---
-title: "Follow-up time is not a predictor: target leakage, survival re-analysis and external validation of machine-learning mortality models in heart failure"
+title: "Follow-up time is not a predictor: target leakage in a widely used heart-failure benchmark, its prevalence in public code, and leakage-free survival models with external validation"
 author: "[Authors, affiliations, ORCID — to be completed]"
-date: "Draft v0.1 — generated from results/RESULTS_SUMMARY.md"
+date: "Draft v0.2 — numbers from results/RESULTS_SUMMARY.md"
 ---
 
 <!--
 DRAFTING NOTES (delete before submission)
-* Every number below is copied from results/RESULTS_SUMMARY.md (development cohort).
-  If the analysis is re-run, update the numbers from that file, never from memory.
-* [MIMIC: ...] marks results that must be filled from results/tables/mimic_*.csv after
-  running scripts/run_external_validation.py with PhysioNet access.
-* [VERIFY] marks statements that must be checked against the cited source.
-* Verify every reference (volume, pages, DOI) before submission.
-* Convert to Word:  pandoc manuscript_draft.md -o manuscript_draft.docx
+* Every number is copied from results/RESULTS_SUMMARY.md. Re-copy after any re-run.
+* [MIMIC: ...] = fill from results/tables/mimic_*.csv after scripts/run_external_validation.py.
+* [VERIFY] = check against the full text of the cited source. Details of several
+  references come from search-engine snippets (publisher sites were not reachable
+  when drafting); see docs/manuscript/literature_review.md for the status of each.
+* Word: pandoc manuscript_draft.md -o manuscript_draft.docx
+* Target length ≈ 4500 words + 6 figures/tables; check the target journal's limits.
 -->
 
 # Abstract
 
-**Background.** A public cohort of 299 patients with heart failure is among the most widely used datasets for machine-learning mortality prediction. Many studies, including the influential analysis by Chicco and Jurman (2020), use the follow-up period (`time`) as an input feature. Follow-up ends at death or censoring, so this variable is determined by the outcome and is unknown when a prognosis is made.
+**Background.** A public cohort of 299 patients with heart failure (Ahmad et al., 2017) has become a standard benchmark for machine-learning mortality prediction. It was popularised by Chicco and Jurman (2020). The data include the follow-up period (`time`), which ends at death or censoring. This variable is therefore produced by the outcome and is unknown when a prognosis is made.
 
-**Methods.** We quantified target leakage with five experiments on 100 paired stratified train–test splits: follow-up by vital status, a `time`-only model, models with versus without `time`, a permutation control, and a fixed-horizon reformulation. A simulation study (100 synthetic cohorts per scenario) tested whether the leakage persists when no covariate affects survival. We then re-framed the task as time-to-event prediction from 11 baseline variables. We compared Cox proportional-hazards, random survival forest (RSF) and gradient-boosted Cox models using 10 × 5-fold repeated cross-validation and bootstrap optimism correction, with discrimination, calibration, decision-curve and subgroup analyses. Models were externally validated on [MIMIC: n] adults with a first heart-failure admission in MIMIC-III.
+**Objectives.** (i) To quantify the target leakage caused by using `time` as a predictor and to establish its mechanism. (ii) To measure how often public code uses `time` as a predictor. (iii) To estimate leakage-free prognostic performance with survival models and test it in an independent cohort.
 
-**Results.** With a random forest, the Matthews correlation coefficient (MCC) was 0.36 using baseline variables and 0.54 using `time` alone. Combining the two gave 0.64 (paired difference 0.28, 95% CI 0.15–0.41, p < 0.001), whereas a shuffled `time` gave no gain (0.36). In simulated cohorts with no covariate effect, baseline variables gave an MCC of 0.00 and `time` alone 0.48. Without leakage, Harrell's C-index was 0.70 for Cox, 0.72 for RSF and 0.73 for gradient-boosted Cox. Differences from Cox were not significant (all p > 0.19). A Cox model with ejection fraction and serum creatinine only reached 0.69. Out-of-fold 90-day risks were well calibrated (observed/expected 0.97–1.03) and gave a positive net benefit for thresholds of about 10–45%. In MIMIC-III, [MIMIC: C-index, calibration slope, effect of recalibration].
+**Methods.**
+- *Leakage.* Five experiments on 100 paired stratified splits: follow-up by vital status, a `time`-only model, models with versus without `time`, a permutation control, and a fixed-horizon reformulation. A simulation in which no covariate affects survival (100 cohorts per scenario).
+- *Code audit.* Code search of GitHub with rule-based static classification, verified manually on two random samples.
+- *Replication.* Ten classifiers re-run and compared with the published values.
+- *Survival models.* Cox, random survival forest (RSF) and gradient-boosted Cox, evaluated with 10 × 5-fold cross-validation and bootstrap optimism correction. Calibration, decision-curve and subgroup analyses.
+- *External validation.* Applied in MIMIC-III ([MIMIC: n]).
 
-**Conclusions.** The high performance reported for this dataset largely reflects leakage from follow-up time. Leakage-free survival models achieve moderate discrimination (C ≈ 0.70), and a simple Cox model is not outperformed by flexible learners. Follow-up time should never be used as a predictor of an outcome that terminates follow-up.
+**Results.**
+- *Replication.* Without `time`, we reproduced the published performance: random forest MCC 0.36 vs 0.38 published; ROC AUC 0.79 vs 0.80.
+- *Leakage.* With a random forest, MCC was 0.36 with baseline variables, 0.54 with `time` alone and 0.64 with both (Δ 0.28, 95% CI 0.15–0.41). Shuffling `time` removed the gain (0.36). In simulated cohorts with no covariate effect, `time` alone still gave an MCC of 0.48.
+- *Code audit.* Of 729 public repositories that fit a model to these data, 68.2% (95% CI 64.7–71.5) used `time` as a predictor. 8.8% excluded it, and 1.1% used survival methods. Rule-based classification agreed with manual review in 93.3% of an independent sample.
+- *Survival models.* Without leakage, Harrell's C was 0.70 (Cox), 0.72 (RSF) and 0.73 (gradient-boosted Cox), with no significant differences. A two-variable Cox model reached 0.69. Out-of-fold 90-day risks were well calibrated (observed/expected 0.97–1.03).
+- *External validation.* In MIMIC-III, [MIMIC: C-index, calibration slope, effect of recalibration].
 
-**Keywords:** heart failure; survival analysis; target leakage; external validation; machine learning; MIMIC-III; TRIPOD+AI
+**Conclusions.** Most of the high performance reported for this benchmark reflects leakage from follow-up time, and the error is common in public code. Correctly specified survival models give moderate discrimination, and a simple Cox model is not outperformed by flexible learners.
+
+**Keywords:** heart failure; survival analysis; target leakage; reproducibility; external validation; machine learning; MIMIC-III; TRIPOD+AI
 
 # 1. Introduction
 
-Heart failure affects tens of millions of people worldwide and carries high short-term mortality. Prognostic models help with risk communication, follow-up intensity and trial enrichment. In 2017 Ahmad et al. released data from 299 patients with left-ventricular systolic dysfunction treated in Faisalabad, Pakistan [1] [VERIFY centre and period]. Chicco and Jurman (2020) used these data to compare machine-learning classifiers and concluded that serum creatinine and ejection fraction alone can predict survival [2]. The dataset has since become a standard benchmark in public repositories and in the literature.
+Heart failure carries high short-term mortality, and prognostic models are used for risk communication, care planning and trial enrichment. Machine-learning (ML) models are often presented as superior to regression for this task. However, a meta-analysis of heart-failure event prediction found no significant advantage of ML over statistical models [1].
 
-The dataset includes `time`, the number of days of follow-up. Follow-up ends either at death or at censoring. Patients who die early necessarily have short follow-up, while survivors are followed until the end of the study. Using `time` as a predictor of the death indicator is therefore a form of *target leakage*: information that is a consequence of the outcome, and is not available at prediction time, enters the model [3,4]. Leakage inflates apparent performance and is a recognised cause of irreproducible machine-learning findings in science [4].
+In 2017 Ahmad et al. published records of 299 patients with left-ventricular systolic dysfunction (NYHA class III–IV). The patients were treated at the Institute of Cardiology and Allied Hospital, Faisalabad, Pakistan, between April and December 2015, and the study analysed survival with Cox regression [2]. The same group later developed sex-specific Cox models on these data (C-index 0.72–0.77) [3]. After Chicco and Jurman (2020) showed that serum creatinine and ejection fraction suffice to predict survival with ML classifiers [4], the dataset became a popular benchmark on the UCI Machine Learning Repository and Kaggle.
 
-The death indicator is also right-censored. About two thirds of patients were alive at the end of a follow-up of variable length, so "survived" is not a defined outcome. Treating the indicator as a binary label ignores censoring. The methodologically appropriate formulation is time-to-event analysis, with `time` used as the outcome rather than a feature.
+The dataset contains `time`, the number of days of follow-up until death or censoring. Patients who die early necessarily have short follow-up, whereas survivors are followed until the end of the study. Using `time` to predict the death indicator is therefore *target leakage*: information that is a consequence of the outcome, and unavailable at prediction time, enters the model [5,6]. Leakage is a leading cause of irreproducible ML findings across scientific fields [6].
 
-This study had three aims. (i) To quantify the leakage introduced by `time` and to show by simulation that it is structural rather than dataset-specific. (ii) To estimate leakage-free prognostic performance with survival models, following the TRIPOD+AI reporting guideline [5]. (iii) To assess transportability by external validation in MIMIC-III, a large, independent, US hospital cohort [6].
+Chicco and Jurman's main analysis excluded follow-up time; they examined it only in a secondary analysis [4] [VERIFY wording]. Many later studies, however, report accuracies of 0.83–1.00 and rank follow-up time as the most important feature [7–13]. The death indicator is also right-censored: two thirds of patients were alive at the end of a follow-up of variable length. Treating "survived" as a class label therefore ignores censoring.
+
+Three recent works point in the same direction:
+- A 2026 preprint argues that using follow-up as an input causes severe target leakage and proposes discrete-time survival models [14].
+- A 2025 study compares Cox regression and random survival forests on these data in relation to follow-up adequacy [15].
+- A 2025 preprint evaluates models trained on these data in MIMIC-IV and reports lower performance [16].
+
+To our knowledge, no study has (i) isolated the leakage mechanism with complementary experiments, including a null-effect simulation; (ii) measured how widespread the error is; (iii) replicated the original benchmark against its published values; and (iv) externally validated leakage-free *survival* models with censoring-aware calibration, recalibration and decision curves, while releasing fully tested code. This study addresses these four gaps, and is reported following TRIPOD+AI [17].
 
 # 2. Methods
 
 ## 2.1 Development cohort
 
-The development cohort comprised all 299 patients (96 deaths, 32.1%) in the public dataset (UCI Machine Learning Repository; Kaggle `andrewmvd/heart-failure-clinical-data`). File integrity was verified with SHA-256. The data were de-identified and openly licensed, so no ethics approval was required. Eleven baseline variables were available: age, sex, anaemia, diabetes, hypertension, smoking, creatinine phosphokinase (CPK), ejection fraction (EF), platelets, serum creatinine and serum sodium. Follow-up ranged from 4 to 285 days. There were no missing values. The distributed file is sorted by follow-up time, so it was shuffled with a fixed seed before any analysis to prevent order-dependent artefacts.
+We used all 299 patients (96 deaths, 32.1%) in the public dataset (UCI Machine Learning Repository record 519; Kaggle `andrewmvd/heart-failure-clinical-data`). File integrity was verified by SHA-256.
 
-## 2.2 Leakage experiments
+The eleven baseline variables were:
+- age, sex;
+- anaemia, diabetes, hypertension, smoking;
+- creatinine phosphokinase (CPK), ejection fraction (EF), platelets, serum creatinine and serum sodium.
 
-All experiments used the same 100 stratified 70/30 train–test partitions. Random forest, logistic regression and gradient-boosting classifiers were fitted with pre-processing inside each training partition.
+Follow-up ranged from 4 to 285 days, and there were no missing values. The distributed file is sorted by follow-up time, so it was shuffled with a fixed seed before analysis. The data are de-identified and openly licensed; no ethics approval was required.
 
-- **A — Distribution.** Follow-up was compared between patients who died and those censored.
-- **B — `time` only.** Classifiers were trained on follow-up time alone.
-- **C — With versus without `time`.** The 11 baseline variables, with and without `time`.
-- **D — Permutation control.** `time` was permuted independently within the training and test partitions and added to the baseline variables. If adding `time` helped only because of an extra column, this control would also gain. If the gain comes from outcome-coupled values, it would not.
-- **E — Fixed-horizon reformulation.** Death within 90 or 180 days was predicted from baseline variables only. Patients censored before the horizon were excluded, because their label is undefined.
+## 2.2 Replication and leakage experiments
 
-The primary metric was the MCC; ROC AUC was secondary. Paired differences between feature sets were tested with the corrected resampled t-test of Nadeau and Bengio [7], which accounts for overlap between training sets.
+All classification experiments used the same 100 stratified 70/30 partitions, with pre-processing fitted on training data only.
 
-For comparability with Chicco and Jurman [2], we also re-ran ten classifiers (random forest, decision tree, gradient boosting, logistic regression, one-rule stump, naive Bayes, linear and RBF support-vector machines, k-nearest neighbours, multilayer perceptron) on three feature sets: all variables including `time` (S1), baseline variables (S2), and EF plus serum creatinine (S3).
+**Replication.** Ten classifiers mirroring the original study were re-run on three feature sets:
+- **S1:** all variables including `time`;
+- **S2:** the 11 baseline variables;
+- **S3:** EF and serum creatinine.
+
+The classifiers were random forest, decision tree, gradient boosting, logistic regression, a one-rule stump, naive Bayes, linear and RBF support-vector machines, k-nearest neighbours and a multilayer perceptron. Results were compared with the published tables [4].
+
+**Leakage experiments.** Random forest, logistic regression and gradient boosting were used.
+- **(A) Distribution:** follow-up time in patients who died vs those censored.
+- **(B) `time` only:** classifiers trained on follow-up time alone.
+- **(C) With vs without `time`:** baseline variables with and without `time`.
+- **(D) Permutation control:** `time` permuted independently within the training and test partitions.
+- **(E) Fixed horizon:** death within 90 or 180 days predicted from baseline variables, excluding patients censored before the horizon.
+
+The primary metric was the Matthews correlation coefficient (MCC). Paired differences were tested with the corrected resampled t-test [18].
 
 ## 2.3 Simulation study
 
-To test whether the leakage is structural, we generated synthetic cohorts of 299 patients. Covariate vectors were resampled from the real cohort. Event times were drawn from an exponential proportional-hazards model under two scenarios: no covariate effect (all log-hazard ratios 0), and effects equal to the standardised Cox estimates from the real data. Censoring times were drawn from the empirical censoring distribution of the real cohort. The baseline hazard was calibrated so that the event proportion matched the observed 32%. For each of 100 cohorts per scenario we computed 5-fold cross-validated MCC with baseline variables, `time` only, and both.
+Synthetic cohorts of 299 patients were generated by resampling covariates from the real data. Event times were exponential under two scenarios: no covariate effect, and standardised effects equal to the Cox estimates from the real data. Censoring times were drawn from the empirical censoring distribution, and the baseline hazard was tuned to give a 32% event proportion. For each of 100 cohorts per scenario we computed 5-fold cross-validated MCC with baseline variables, with `time` only, and with both.
 
-## 2.4 Survival models
+## 2.4 Audit of public code
+
+We searched GitHub on 4 November 2026 for Jupyter notebooks and Python files containing the dataset file name, using the REST code-search API, which returns up to 1,000 results per query. Files were downloaded but never executed. Notebook code cells were extracted and comments removed.
+
+Transparent rules (released with the code) assigned each file to one of five categories:
+- `time` used as a predictor (e.g. all columns except the outcome, `iloc[:, :-1]`, explicit lists or formulas containing `time`);
+- `time` explicitly excluded;
+- both;
+- survival analysis;
+- unresolved.
+
+Repositories were classified by their most leakage-prone file; forks were excluded. Proportions are reported with Wilson 95% CIs among repositories that fit a model. Two sensitivity analyses were run: de-duplication of identical files and restriction to resolved repositories.
+
+The rules were checked against manual review on two random samples: a development sample of 40 repositories, on which the rules were refined, and an independent sample of 30 repositories, with the rules frozen.
+
+## 2.5 Survival models and internal validation
 
 We fitted four models:
 1. a ridge-penalised Cox model (penalty 0.1) on the 11 baseline variables;
-2. the same model on EF and serum creatinine only;
-3. a random survival forest [8] with 500 trees, minimum leaf size 15 and √p candidate variables per split;
+2. the same model on EF and serum creatinine;
+3. a random survival forest [19] with 500 trees, minimum leaf size 15 and √p candidate variables per split;
 4. a gradient-boosted Cox model (200 trees of depth 2, learning rate 0.05, subsampling 0.8).
 
-CPK, serum creatinine and platelets were log-transformed. All variables were standardised within training folds. Hyperparameters were fixed a priori to limit optimism given the small sample. DeepSurv [9] is implemented and can be run as a sensitivity analysis.
+CPK, creatinine and platelets were log-transformed and all variables standardised within training folds. Hyperparameters were fixed a priori.
 
-## 2.5 Internal validation and performance measures
-
-Performance was estimated by 10 × repeated stratified 5-fold cross-validation, with stratification on the event indicator. Measures computed on each test fold:
-- Harrell's C-index [10] and Uno's IPCW C-index truncated at 240 days [11];
+Performance was estimated by 10 × repeated stratified 5-fold cross-validation. Measures:
+- Harrell's C [20] and Uno's C truncated at 240 days [21];
 - cumulative/dynamic time-dependent AUC at 30, 60, 90 and 180 days;
-- the Brier score at the same horizons;
-- the integrated Brier score (IBS) over 15–240 days [12], compared with a Kaplan–Meier null model.
+- Brier scores, and the integrated Brier score over 15–240 days [22] against a Kaplan–Meier null model.
 
-Models were compared with Cox on identical folds using the corrected resampled t-test. Optimism-corrected C-indices and calibration slopes were also estimated by bootstrap with 200 resamples [10].
+Models were compared with Cox on identical folds using the corrected resampled t-test. Bootstrap optimism correction and calibration slopes used 200 resamples [20].
 
-Calibration of out-of-fold 90- and 180-day risks was assessed by comparing the mean predicted risk with the Kaplan–Meier observed risk, overall (observed/expected ratio) and within risk quintiles [13]. Clinical utility was assessed by decision-curve analysis adapted for censored data, with event probabilities among high-risk patients estimated by Kaplan–Meier [14].
+Out-of-fold 90- and 180-day risks were compared with Kaplan–Meier observed risks, overall and by quintile [23]. Clinical utility was assessed with decision curves adapted for censoring [24]. Hazard ratios were estimated from an unpenalised Cox model, and proportional hazards were tested with Schoenfeld residuals [25].
 
-Hazard ratios were obtained from an unpenalised Cox model on the full cohort, with clinically interpretable scaling (per 10 years, per 5 EF points, per doubling of laboratory values). The proportional-hazards assumption was tested with scaled Schoenfeld residuals [15].
+Importance was estimated by out-of-fold permutation (drop in C-index); SHAP values [26] were computed on held-out folds. Subgroup C-indices (sex, age < 65 / ≥ 65 years, and their intersections) were obtained from out-of-fold risks with bootstrap CIs. Sample-size adequacy followed Riley et al. [27,28].
 
-Variable importance was estimated as the out-of-fold decrease in C-index after permutation. SHAP values [16] were computed on held-out folds only. Subgroup performance by sex, age (< 65 / ≥ 65 years) and their intersections was estimated from out-of-fold risks with stratified bootstrap 95% CIs. Subgroups with fewer than 20 events were labelled exploratory. Sample-size adequacy was assessed with the criteria of Riley et al. [17,18].
+## 2.6 External validation (MIMIC-III)
 
-## 2.6 External validation cohort (MIMIC-III)
+**Data.** MIMIC-III v1.4 [29] under the PhysioNet credentialed data use agreement.
 
-We used MIMIC-III v1.4 [6] (Beth Israel Deaconess Medical Center, Boston, 2001–2012) under the PhysioNet credentialed data use agreement.
+**Cohort.**
+- Adults whose first admission (ordered by admission time) carried an ICD-9 428.x code.
+- Laboratory values: the first measurement from 6 h before to 24 h after admission.
+- Comorbidities: ICD-9 codes recorded during the index admission.
+- Anaemia: haematocrit < 36%, the definition used for the development cohort [3] [VERIFY in [2]].
+- EF: extracted from echocardiography reports of the index stay or the preceding year with a rule-based parser. The parser was validated against two annotators on [MIMIC: n] reports.
 
-**Cohort definition.**
-- Adults (≥ 18 years) whose first admission, ordered by admission time, carried an ICD-9 428.x diagnosis.
-- Laboratory predictors: the first measurement between 6 hours before and 24 hours after admission.
-- Comorbidities: ICD-9 codes recorded during the index admission (diabetes 250.x; hypertension 401–405; smoking 305.1, V15.82).
-- Anaemia: haematocrit < 36%, the development-cohort definition [1] [VERIFY].
-- EF: extracted with a rule-based parser from echocardiography reports of the index stay or, if none was available, from the preceding year. The parser's accuracy was evaluated against manual annotation of [MIMIC: n] reports by two annotators.
+**Harmonisation.** Units were harmonised (platelets ×1000). Missing CPK was imputed with the development-cohort median, with complete-case analysis as a sensitivity analysis.
 
-**Harmonisation.** Units were harmonised to the development cohort; in particular, platelets were converted from K/µL to /µL. Missing CPK was imputed with the development-cohort median, and a complete-case analysis was run as a sensitivity analysis.
+**Endpoints.** Primary: all-cause death within 90 days of admission (PATIENTS.DOD, which combines hospital and Social Security records [VERIFY coverage]). Secondary: in-hospital death.
 
-**Endpoints.** The primary endpoint was all-cause death within 90 days of admission, taken from the date of death in the PATIENTS table, which combines hospital and Social Security records [VERIFY coverage]. In-hospital death was a secondary endpoint.
-
-**Validation analysis.**
+**Analysis.**
 - Models fitted on the full development cohort were applied without re-estimation.
 - We report Harrell's C, the 90-day AUC, calibration-in-the-large, calibration slope and the expected calibration error.
-- We then report cross-fitted recalibration (intercept update, logistic recalibration, isotonic regression).
+- Recalibration was cross-fitted: intercept update, logistic recalibration and isotonic regression.
 - Sensitivity analyses: numeric EF only, complete-case CPK, and age ≥ 40 years.
 
-## 2.7 Software and reproducibility
+## 2.7 Software and availability
 
-Analyses used Python 3.13 with scikit-learn 1.9, scikit-survival 0.28 [19], lifelines 0.30 [20], statsmodels 0.15 and SHAP 0.54. The seed was 42 throughout. All code, unit tests, the result tables and an auto-generated results summary are publicly available at https://github.com/elifnuroksuzz/HF-Survival-Analysis-Leakage-Revisit [Zenodo DOI]. MIMIC-III data cannot be redistributed; the extraction SQL is provided.
+Python 3.13, scikit-learn 1.9, scikit-survival 0.28 [30], lifelines 0.30 [31], statsmodels 0.15 and SHAP 0.54; seed 42. Code, 46 unit tests, all result tables, the audit classifications and an auto-generated results summary are available at https://github.com/elifnuroksuzz/HF-Survival-Analysis-Leakage-Revisit [Zenodo DOI]. MIMIC-III data cannot be shared; the extraction SQL is provided.
 
 # 3. Results
 
 ## 3.1 Cohort
 
-Table 1 compares patients who died with those censored. Patients who died were older (median 65 vs 60 years), had lower EF (30% vs 38%), higher serum creatinine (1.3 vs 1.0 mg/dL) and lower serum sodium (135.5 vs 137 mEq/L; all p < 0.001). Kaplan–Meier curves separated by tertiles of serum creatinine (log-rank p < 0.001) and of EF (p = 0.019) (Figure 2a).
+Patients who died were older (median 65 vs 60 years), had lower EF (30% vs 38%), higher serum creatinine (1.3 vs 1.0 mg/dL) and lower serum sodium (135.5 vs 137 mEq/L) than censored patients (all p < 0.001; Table 1). Kaplan–Meier curves separated by tertiles of serum creatinine (log-rank p < 0.001) and EF (p = 0.019; Figure 2a).
 
-## 3.2 Follow-up time leaks the outcome
+## 3.2 Replication of the benchmark
 
-Median follow-up was 44 days (IQR 26–102) in patients who died and 172 days (IQR 95–213) in censored patients. 36.5% of deaths, but only 2.5% of censorings, occurred within 30 days (Figure 1a).
+Without follow-up time (S2), our random forest reproduced the published values [4] [VERIFY]:
 
-`time` alone achieved an MCC of 0.54–0.62 and a ROC AUC of 0.83–0.84 across classifiers, compared with 0.33–0.36 and 0.75–0.79 for the 11 baseline variables (Figure 1b). Adding `time` to the baseline variables raised the MCC by 0.28 (95% CI 0.15–0.41) for random forest, 0.28 (0.14–0.41) for gradient boosting and 0.23 (0.09–0.37) for logistic regression (all p ≤ 0.001). A permuted `time` produced no gain (ΔMCC −0.001 to 0.011, all p ≥ 0.81).
+| Measure | This study | Published |
+|---|---|---|
+| MCC | 0.358 | 0.384 |
+| F1 | 0.520 | 0.547 |
+| Accuracy | 0.735 | 0.740 |
+| ROC AUC | 0.786 | 0.800 |
 
-In the replication of Chicco and Jurman, all ten classifiers lost performance when `time` was removed. For random forest, MCC fell from 0.64 to 0.36 and ROC AUC from 0.91 to 0.79. The EF-plus-creatinine model reached an MCC of 0.41 (Supplementary Table S1). [VERIFY: compare with the values published in [2], transcribed into data/reference/.]
+With EF and creatinine only (S3), MCC was 0.407 vs 0.418 published.
 
-In the leakage-free fixed-horizon reformulation, ROC AUC was 0.66–0.71 for 90-day death (n = 254 eligible, 27.2% events) and 0.70–0.74 for 180-day death (n = 192, 46.4% events). Excluding censored patients discarded 15% and 36% of the cohort, respectively.
+All ten classifiers performed better when `time` was added (S1). For random forest, MCC rose to 0.637 and ROC AUC to 0.909 (Supplementary Table S1). Across classifiers, the S1–S2 difference in MCC ranged from 0.16 to 0.33 (all p ≤ 0.016).
 
-## 3.3 Simulation
+## 3.3 Follow-up time leaks the outcome
 
-When no covariate affected survival, baseline variables gave an MCC of −0.002 (2.5th–97.5th percentile −0.15 to 0.16), as expected. `time` alone, however, gave 0.48 (0.36–0.61), and baseline variables plus `time` 0.35 (0.21–0.50) (random forest; Supplementary Figure S1). Under the observed effects, `time` again outperformed the baseline variables (0.53 vs 0.22). Leakage from follow-up time is therefore a structural consequence of right-censored follow-up, independent of any prognostic signal.
+Median follow-up was 44 days (IQR 26–102) in patients who died and 172 days (95–213) in censored patients. 36.5% of deaths, but only 2.5% of censorings, occurred within 30 days (Figure 1a).
 
-## 3.4 Leakage-free survival models
+With `time` alone, MCC was 0.54–0.62 and ROC AUC 0.83–0.84. With the 11 baseline variables, MCC was 0.33–0.36 and ROC AUC 0.75–0.79 (Figure 1b). Adding `time` to the baseline variables increased MCC by 0.28 (95% CI 0.15–0.41) for random forest, 0.28 (0.14–0.41) for gradient boosting and 0.23 (0.09–0.37) for logistic regression (all p ≤ 0.001). A permuted `time` produced no gain (ΔMCC −0.001 to 0.011; all p ≥ 0.81).
 
-Cross-validated Harrell's C was 0.70 for Cox (2.5th–97.5th percentile over folds 0.57–0.79), 0.69 for Cox with EF and creatinine (0.57–0.80), 0.72 for RSF (0.62–0.83) and 0.73 for gradient-boosted Cox (0.61–0.84) (Figure 3). Uno's C was 0.71–0.74, and the 180-day AUC 0.71–0.76.
+In the leakage-free fixed-horizon formulation, ROC AUC was 0.66–0.71 at 90 days and 0.70–0.74 at 180 days. Excluding censored patients removed 15% and 36% of the cohort, respectively.
 
-The IBS was 0.16–0.17 for all models, compared with 0.19 for the Kaplan–Meier null model. No model differed significantly from Cox in Harrell's C (RSF +0.02, p = 0.34; gradient-boosted Cox +0.03, p = 0.20; EF-and-creatinine Cox −0.01, p = 0.59), Uno's C or IBS.
+## 3.4 Simulation
 
-Bootstrap optimism was 0.03 for Cox, 0.06 for RSF and 0.07 for gradient-boosted Cox. Calibration slopes were 0.83 (95% interval 0.64–1.09), 0.85 (0.73–0.97) and 0.68 (0.50–0.83), respectively, which indicates overfitting of the boosted model.
+When no covariate affected survival, baseline variables gave an MCC of −0.002 (2.5th–97.5th percentile −0.15 to 0.16). `time` alone gave 0.48 (0.36–0.61), and baseline variables plus `time` gave 0.35 (0.21–0.50) (random forest; Supplementary Figure S1). With the observed effects, `time` alone again exceeded the baseline variables (0.53 vs 0.22). The apparent signal of `time` is therefore generated by censored follow-up itself.
+
+## 3.5 Prevalence of the error in public code
+
+The search returned 1,579 files from 979 non-fork repositories; 729 repositories fitted a model (Figure 7).
+
+| Category | Repositories | Share (95% CI) |
+|---|---|---|
+| Used `time` as a predictor in at least one analysis | 497 | 68.2% (64.7–71.5) |
+| — of which with and without `time` | 38 | 5.2% |
+| Excluded `time` | 64 | 8.8% (6.9–11.1) |
+| Used survival methods | 8 | 1.1% (0.6–2.2) |
+| Feature set unresolved | 160 | 21.9% |
+
+After de-duplicating identical files, the share using `time` was 68.9% (65.3–72.2). Among repositories with a resolved feature set it was 87.3% (84.4–89.8).
+
+On the independent verification sample (n = 30), the rules agreed with manual review on whether `time` was used in 93.3% of repositories (95% CI 78.7–98.2), with a positive predictive value of 95.8% and a sensitivity of 95.8%. One repository was misclassified in each direction. One of the repositories using `time` as a predictor was itself titled as a "leakage-prevention" pipeline.
+
+In the published literature, several studies on these data ranked follow-up time as the most important predictor [7,8,12]. Reported accuracies ranged from 0.83 to 1.00 [7–13] (Supplementary Table S-Lit) [VERIFY each study's use of `time`, oversampling and validation].
+
+## 3.6 Leakage-free survival models
+
+| Model | Harrell's C (2.5th–97.5th percentile over folds) |
+|---|---|
+| Cox | 0.70 (0.57–0.79) |
+| Cox, EF + creatinine | 0.69 (0.57–0.80) |
+| RSF | 0.72 (0.62–0.83) |
+| Gradient-boosted Cox | 0.73 (0.61–0.84) |
+
+Uno's C was 0.71–0.74 and the 180-day AUC 0.71–0.76 (Figure 3). The IBS was 0.16–0.17, against 0.19 for the Kaplan–Meier null model. No model differed significantly from Cox (Harrell's C: RSF +0.02, p = 0.34; gradient-boosted Cox +0.03, p = 0.20; EF + creatinine −0.01, p = 0.59).
+
+Bootstrap optimism was 0.03 (Cox), 0.06 (RSF) and 0.07 (gradient-boosted Cox). Calibration slopes were 0.83 (0.64–1.09), 0.85 (0.73–0.97) and 0.68 (0.50–0.83), respectively.
 
 Adjusted hazard ratios (Table 2):
-- age: 1.54 per 10 years (95% CI 1.28–1.86);
+- age: 1.54 per 10 years (1.28–1.86);
 - EF: 0.81 per 5 points (0.73–0.89);
-- serum creatinine: 1.94 per doubling (1.47–2.58);
+- creatinine: 1.94 per doubling (1.47–2.58);
 - anaemia: 1.60 (1.05–2.42);
 - hypertension: 1.66 (1.09–2.53).
 
-Schoenfeld tests suggested non-proportional hazards for EF and CPK (p < 0.05). In out-of-fold permutation importance, serum creatinine, EF and age were the only variables whose permutation reduced RSF discrimination (Figure 4).
+Non-proportional hazards were suggested for EF and CPK. Serum creatinine, EF and age were the only variables whose permutation reduced RSF discrimination (Figure 4).
 
-## 3.5 Calibration, clinical utility and subgroups
+## 3.7 Calibration, clinical utility and subgroups
 
-Out-of-fold 90-day risks were well calibrated:
-- mean predicted risk 23.1–24.4%, against an observed Kaplan–Meier risk of 23.7%;
-- observed/expected ratio 0.97–1.03 at 90 days and 0.96–1.04 at 180 days.
+Mean out-of-fold 90-day risk was 23.1–24.4%, against an observed 23.7% (observed/expected 0.97–1.03; 0.96–1.04 at 180 days). All models gave a higher net benefit than treat-all or treat-none for thresholds of about 0.10 to 0.43–0.60 (Figure 6).
 
-All models gave a higher net benefit than treating all or no patients for 90-day threshold probabilities between approximately 0.10 and 0.43–0.60 (Figure 6).
+Cox C-index was similar in women (0.69, 95% CI 0.59–0.78) and men (0.71, 0.64–0.77), and in patients aged < 65 years (0.67, 0.60–0.75) and ≥ 65 years (0.69, 0.61–0.76) (Table 3).
 
-Cox C-index was similar in women (0.69, 95% CI 0.59–0.78) and men (0.71, 0.64–0.77), and in patients aged < 65 years (0.67, 0.60–0.75) and ≥ 65 years (0.69, 0.61–0.76). Intersectional subgroups had overlapping intervals (Table 3).
+Riley's criteria required 351 patients, against 299 available; the expected shrinkage was 0.87.
 
-The apparent Cox–Snell R² was 0.24. The minimum sample size by Riley's criteria was 351, against 299 available, with an expected shrinkage of 0.87.
+## 3.8 External validation in MIMIC-III
 
-## 3.6 External validation in MIMIC-III
-
-[MIMIC: attrition (flow diagram from mimic_primary_attrition.csv); final n, 90-day deaths; Table 1 comparison.]
-
-[MIMIC: parser accuracy — detection sensitivity/PPV, mean absolute error, Bland–Altman limits, category agreement.]
-
-[MIMIC: Harrell's C and 90-day AUC per model with 95% CI; AUC for in-hospital death.]
-
-[MIMIC: calibration before and after recalibration (calibration-in-the-large, slope, ECE); Figure 5.]
-
-[MIMIC: sensitivity analyses; subgroup table.]
+[MIMIC: flow diagram; cohort characteristics vs development cohort; EF parser accuracy; C-index and 90-day AUC with 95% CI; calibration before and after recalibration (Figure 5); sensitivity analyses; subgroups.]
 
 # 4. Discussion
 
-We show that the follow-up variable in a widely used heart-failure dataset leaks the outcome. The leakage accounts for most of the high classification performance reported for this dataset. Without leakage, survival models built from baseline variables achieve moderate discrimination (C ≈ 0.70) and good internal calibration. Simple Cox models perform as well as flexible machine-learning survival models.
+We report three findings. First, the follow-up variable in this widely used heart-failure benchmark leaks the outcome. The leakage explains most of the performance gap between reported results and what is achievable at the point of prognosis. Second, the error is pervasive: about two thirds of public code fitting models to these data uses follow-up time as a predictor, and only about 1% uses survival methods. Third, correctly specified survival models reach a C-index of about 0.70 with good internal calibration, and a simple Cox model is not improved upon by flexible learners.
 
-Four lines of evidence support the leakage interpretation:
-1. `time` alone is as predictive as all clinical variables combined, or more so.
-2. Its contribution vanishes when its values are decoupled from the outcome by permutation.
-3. A model using `time` reaches an MCC near 0.5 in simulated cohorts in which no variable carries prognostic information.
-4. The mechanism is self-evident from the study design: follow-up stops at death.
+**Mechanism.** The evidence for leakage is convergent:
+1. Follow-up alone predicts death as well as, or better than, all clinical variables.
+2. Its contribution vanishes when its values are decoupled from the outcome.
+3. It produces an MCC near 0.5 in simulated cohorts in which nothing is prognostic.
 
-Chicco and Jurman also reported a follow-up-time-adjusted analysis [2] [VERIFY wording and table]. Our results show that any model taking `time` as input is unsuitable for prospective use, whatever the classifier. This conclusion extends to the many subsequent studies that used the full feature set [VERIFY: a systematic count of such studies would substantially strengthen this point].
+The simulation is important. It shows that the inflated performance is not a property of this cohort but a structural consequence of right-censored follow-up. Any dataset whose follow-up ends at the event is exposed to the same problem.
 
-Our leakage-free estimates agree with established heart-failure risk scores, whose C-statistics typically lie between 0.65 and 0.75 [VERIFY with references, e.g. MAGGIC, Seattle HF Model]. Serum creatinine, EF and age carried almost all of the discriminative signal. This supports the parsimony argument of Chicco and Jurman, now on a sound methodological footing: the two-variable Cox model was not significantly worse than the 11-variable model.
+**Relation to prior work.** Chicco and Jurman excluded follow-up time from their main analysis, and our replication matched their published results closely. The leakage therefore arises mainly in later reuse of the dataset, where the full feature set is the default.
 
-Flexible learners did not improve discrimination significantly. The boosted model was clearly overfitted (calibration slope 0.68), consistent with the sample-size calculation showing that 299 patients with 96 events fall below the recommended minimum for 11 candidate parameters.
+The discrete-time analysis of Rane et al. [14] makes the same conceptual point and reports a much larger gain from follow-up (MCC ≈ 0.35–0.40 → ≈ 0.94–0.98 [VERIFY]). Our smaller gain (≈ 0.28) may reflect differences in models and validation [VERIFY]. Özgür and Bekiroğlu [15] show that follow-up adequacy affects survival-model performance on these data. The medRxiv study [16] finds that performance declines in MIMIC-IV [VERIFY endpoint and whether `time` was used].
 
-[MIMIC: discuss transportability — case-mix differences (older, US, hospitalised patients), EF from text, ICD-coded comorbidities, endpoint definition; the role of recalibration before local use.]
+We add mechanism-isolating experiments, a measured prevalence in public code, a replication against published values, and censoring-aware external validation with recalibration. Our leakage-free estimates (C ≈ 0.70) agree with the sex-specific Cox models of Zahid et al. (0.72–0.77) [3]. They also agree with the meta-analytic finding that ML offers no consistent advantage for heart-failure events [1].
 
-**Strengths.**
-- Complete, tested and public code, with all pre-processing nested within resampling.
-- Multiple complementary leakage tests, including simulation.
-- Censoring-aware evaluation (time-dependent AUC, IBS, Kaplan–Meier calibration and decision curves).
-- Bootstrap optimism correction.
-- Reporting according to TRIPOD+AI [5].
+**Implications.** For researchers using this or similar datasets:
+- Treat follow-up time as part of the outcome, never as a predictor.
+- Report time-to-event metrics (C-index, time-dependent AUC, IBS) and calibration.
+- Include a permutation or `time`-only control whenever a duration-like variable is present.
+- Release code, so that this class of error can be detected.
+
+For reviewers and editors, a request to state the role of every time-related variable would prevent most instances. Dataset curators could flag the variable in the dataset description on UCI and Kaggle.
 
 **Limitations.**
-- The development cohort is small, single-centre and below the recommended sample size; the CIs are correspondingly wide.
-- Hyperparameters were fixed rather than tuned, which favours stability over peak performance.
-- The proportional-hazards assumption was questionable for EF and CPK.
-- In MIMIC-III, EF was derived from text, comorbidities from billing codes recorded during the index admission, and out-of-hospital deaths from administrative records.
-- The populations differ substantially in age, setting and era.
+- *Development cohort.* Small, single-centre, and below the recommended sample size; the boosted model was overfitted (calibration slope 0.68).
+- *Proportional hazards.* The assumption was questionable for EF and CPK.
+- *Audit.* Limited to code returned by GitHub search; Kaggle notebooks and non-indexed code were not covered. 22% of repositories could not be resolved by static rules, and duplication across course materials inflates counts, although de-duplication did not change the estimate. Code may also not correspond to reported results.
+- *Literature.* Extracted from abstracts and secondary sources for several studies [VERIFY].
+- *MIMIC-III.* EF from text, comorbidities from billing codes, out-of-hospital deaths from administrative records, and substantial case-mix differences.
 
 # 5. Conclusions
 
-Follow-up time must not be used as a predictor of an outcome that ends follow-up. For the 299-patient heart-failure cohort, correctly specified survival models reach a C-index of about 0.70, and a two-variable Cox model is a reasonable, interpretable choice. Researchers using this or similar datasets should report time-to-event analyses with censoring-aware metrics and external validation.
+Follow-up time must not be used to predict an outcome that terminates follow-up. In the 299-patient heart-failure benchmark this error inflates reported performance, is present in most public code, and disappears when the task is formulated as survival analysis. Correctly specified models reach a C-index of about 0.70, and a simple Cox model is a reasonable, interpretable choice.
 
 # Declarations
 
-**Ethics.** Development data: public and de-identified. MIMIC-III: PhysioNet credentialed access [MIMIC: certificate details].
+**Ethics.** Public de-identified development data; MIMIC-III under PhysioNet credentialed access [MIMIC: certificate]. The audit analysed publicly available code only; repositories are cited by name in the supplementary data, and no code was executed.
 **Data and code availability.** https://github.com/elifnuroksuzz/HF-Survival-Analysis-Leakage-Revisit [Zenodo DOI].
-**Competing interests.** [To be completed.] **Funding.** [To be completed.] **Author contributions.** [CRediT roles.]
+**Competing interests / Funding / Author contributions.** [To be completed.]
 
 # References
 
-<!-- [VERIFY] every reference before submission -->
+<!-- Bibliographic details marked [VERIFY] were taken from search-engine snippets. -->
 
-1. Ahmad T, Munir A, Bhatti SH, Aftab M, Raza MA. Survival analysis of heart failure patients: a case study. *PLoS ONE*. 2017;12(7):e0181001.
-2. Chicco D, Jurman G. Machine learning can predict survival of patients with heart failure from serum creatinine and ejection fraction alone. *BMC Med Inform Decis Mak*. 2020;20:16. doi:10.1186/s12911-020-1023-5
-3. Kaufman S, Rosset S, Perlich C, Stitelman O. Leakage in data mining: formulation, detection, and avoidance. *ACM Trans Knowl Discov Data*. 2012;6(4):15.
-4. Kapoor S, Narayanan A. Leakage and the reproducibility crisis in machine-learning-based science. *Patterns*. 2023;4(9):100804.
-5. Collins GS, Moons KGM, Dhiman P, et al. TRIPOD+AI statement: updated guidance for reporting clinical prediction models that use regression or machine learning methods. *BMJ*. 2024;385:e078378.
-6. Johnson AEW, Pollard TJ, Shen L, et al. MIMIC-III, a freely accessible critical care database. *Sci Data*. 2016;3:160035.
-7. Nadeau C, Bengio Y. Inference for the generalization error. *Mach Learn*. 2003;52:239–281.
-8. Ishwaran H, Kogalur UB, Blackstone EH, Lauer MS. Random survival forests. *Ann Appl Stat*. 2008;2(3):841–860.
-9. Katzman JL, Shaham U, Cloninger A, et al. DeepSurv: personalized treatment recommender system using a Cox proportional hazards deep neural network. *BMC Med Res Methodol*. 2018;18:24.
-10. Harrell FE, Lee KL, Mark DB. Multivariable prognostic models: issues in developing models, evaluating assumptions and adequacy, and measuring and reducing errors. *Stat Med*. 1996;15(4):361–387.
-11. Uno H, Cai T, Pencina MJ, D'Agostino RB, Wei LJ. On the C-statistics for evaluating overall adequacy of risk prediction procedures with censored survival data. *Stat Med*. 2011;30(10):1105–1117.
-12. Graf E, Schmoor C, Sauerbrei W, Schumacher M. Assessment and comparison of prognostic classification schemes for survival data. *Stat Med*. 1999;18(17–18):2529–2545.
-13. Van Calster B, McLernon DJ, van Smeden M, Wynants L, Steyerberg EW. Calibration: the Achilles heel of predictive analytics. *BMC Med*. 2019;17:230.
-14. Vickers AJ, Cronin AM, Elkin EB, Gonen M. Extensions to decision curve analysis, a novel method for evaluating diagnostic tests, prediction models and molecular markers. *BMC Med Inform Decis Mak*. 2008;8:53.
-15. Grambsch PM, Therneau TM. Proportional hazards tests and diagnostics based on weighted residuals. *Biometrika*. 1994;81(3):515–526.
-16. Lundberg SM, Lee S-I. A unified approach to interpreting model predictions. *Adv Neural Inf Process Syst*. 2017;30.
-17. Riley RD, Snell KIE, Ensor J, et al. Minimum sample size for developing a multivariable prediction model: part II — binary and time-to-event outcomes. *Stat Med*. 2019;38(7):1276–1296.
-18. Riley RD, Ensor J, Snell KIE, et al. Calculating the sample size required for developing a clinical prediction model. *BMJ*. 2020;368:m441.
-19. Pölsterl S. scikit-survival: a library for time-to-event analysis built on top of scikit-learn. *J Mach Learn Res*. 2020;21(212):1–6.
-20. Davidson-Pilon C. lifelines: survival analysis in Python. *J Open Source Softw*. 2019;4(40):1317.
+1. Sun Z, Dong W, Shi H, Ma H, Cheng L, Huang Z. Comparing machine learning models and statistical models for predicting heart failure events: a systematic review and meta-analysis. *Front Cardiovasc Med*. 2022;9:812276.
+2. Ahmad T, Munir A, Bhatti SH, Aftab M, Raza MA. Survival analysis of heart failure patients: a case study. *PLoS ONE*. 2017;12(7):e0181001.
+3. Zahid FM, Ramzan S, Faisal S, Hussain I. Gender based survival prediction models for heart failure patients: a case study in Pakistan. *PLoS ONE*. 2019;14(2):e0210602.
+4. Chicco D, Jurman G. Machine learning can predict survival of patients with heart failure from serum creatinine and ejection fraction alone. *BMC Med Inform Decis Mak*. 2020;20:16. doi:10.1186/s12911-020-1023-5
+5. Kaufman S, Rosset S, Perlich C, Stitelman O. Leakage in data mining: formulation, detection, and avoidance. *ACM Trans Knowl Discov Data*. 2012;6(4):15.
+6. Kapoor S, Narayanan A. Leakage and the reproducibility crisis in machine-learning-based science. *Patterns*. 2023;4(9):100804.
+7. Moreno-Sánchez PA. Development of an explainable prediction model of heart failure survival by using ensemble trees. In: *2020 IEEE International Conference on Big Data*. 2020:4902–4910.
+8. Moreno-Sánchez PA. Improvement of a prediction model for heart failure survival through explainable artificial intelligence. *Front Cardiovasc Med*. 2023 [VERIFY volume/article]. arXiv:2108.10717.
+9. Ishaq A, Sadiq S, Umer M, et al. Improving the prediction of heart failure patients' survival using SMOTE and effective data mining techniques. *IEEE Access*. 2021;9:39707–39716.
+10. Karakuş MÖ, Er O. A comparative study on prediction of survival event of heart failure patients using machine learning algorithms. *Neural Comput Appl*. 2022;34(16):13895–13908.
+11. Oyewunmi OE, Aladeniyi OB, Bodunwa OK. Comparative study on prediction of survival event of heart failure patients using machine learning and statistical algorithms. *SciMedicine J*. 2023;5(2):44–53.
+12. Talukder MSH, Sulaiman RB, Angon MBP. Unleashing the power of extra-tree feature selection and random forest classifier for improved survival prediction in heart failure patients. arXiv:2308.05765. 2023.
+13. Qadri AM, Hashmi MSA, Raza A, Zaidi SAJ, Rehman A. Heart failure survival prediction using novel transfer learning based probabilistic features. *PeerJ Comput Sci*. 2024;10:e1894.
+14. Rane A, Choudhari A, Kant S, Deep A. Discrete-time survival analysis for heart failure mortality prediction. arXiv:2608.04140. 2026.
+15. Özgür [VERIFY initials], Bekiroğlu [VERIFY]. Why follow-up matters in survival analysis: comparing Cox proportional hazard regression and random survival forest for predicting heart failure outcomes. *BMC Cardiovasc Disord*. 2025. doi:10.1186/s12872-025-05165-x
+16. [VERIFY authors]. Fairness-aware machine learning for heart failure prediction: performance, bias, and clinical deployment insights. medRxiv. 2025. doi:10.1101/2025.10.17.25338263
+17. Collins GS, Moons KGM, Dhiman P, et al. TRIPOD+AI statement: updated guidance for reporting clinical prediction models that use regression or machine learning methods. *BMJ*. 2024;385:e078378.
+18. Nadeau C, Bengio Y. Inference for the generalization error. *Mach Learn*. 2003;52:239–281.
+19. Ishwaran H, Kogalur UB, Blackstone EH, Lauer MS. Random survival forests. *Ann Appl Stat*. 2008;2(3):841–860.
+20. Harrell FE, Lee KL, Mark DB. Multivariable prognostic models: issues in developing models, evaluating assumptions and adequacy, and measuring and reducing errors. *Stat Med*. 1996;15(4):361–387.
+21. Uno H, Cai T, Pencina MJ, D'Agostino RB, Wei LJ. On the C-statistics for evaluating overall adequacy of risk prediction procedures with censored survival data. *Stat Med*. 2011;30(10):1105–1117.
+22. Graf E, Schmoor C, Sauerbrei W, Schumacher M. Assessment and comparison of prognostic classification schemes for survival data. *Stat Med*. 1999;18(17–18):2529–2545.
+23. Van Calster B, McLernon DJ, van Smeden M, Wynants L, Steyerberg EW. Calibration: the Achilles heel of predictive analytics. *BMC Med*. 2019;17:230.
+24. Vickers AJ, Cronin AM, Elkin EB, Gonen M. Extensions to decision curve analysis, a novel method for evaluating diagnostic tests, prediction models and molecular markers. *BMC Med Inform Decis Mak*. 2008;8:53.
+25. Grambsch PM, Therneau TM. Proportional hazards tests and diagnostics based on weighted residuals. *Biometrika*. 1994;81(3):515–526.
+26. Lundberg SM, Lee S-I. A unified approach to interpreting model predictions. *Adv Neural Inf Process Syst*. 2017;30.
+27. Riley RD, Snell KIE, Ensor J, et al. Minimum sample size for developing a multivariable prediction model: part II — binary and time-to-event outcomes. *Stat Med*. 2019;38(7):1276–1296.
+28. Riley RD, Ensor J, Snell KIE, et al. Calculating the sample size required for developing a clinical prediction model. *BMJ*. 2020;368:m441.
+29. Johnson AEW, Pollard TJ, Shen L, et al. MIMIC-III, a freely accessible critical care database. *Sci Data*. 2016;3:160035.
+30. Pölsterl S. scikit-survival: a library for time-to-event analysis built on top of scikit-learn. *J Mach Learn Res*. 2020;21(212):1–6.
+31. Davidson-Pilon C. lifelines: survival analysis in Python. *J Open Source Softw*. 2019;4(40):1317.
 
-# Figure and table plan
+# Figures and tables
 
 | Item | File | Content |
 |---|---|---|
@@ -248,10 +325,15 @@ Follow-up time must not be used as a predictor of an outcome that ends follow-up
 | Table 2 | `results/tables/table2_cox_hazard_ratios.csv` | Adjusted hazard ratios |
 | Table 3 | `results/tables/table3_subgroup_cindex.csv` | Subgroup C-index |
 | Table 4 | `results/tables/mimic_primary_performance.csv` | External validation [MIMIC] |
-| Figure 1 | `results/figures/fig1_time_leakage.pdf` | (a) follow-up by outcome; (b) MCC by feature set |
-| Figure 2 | `fig2a_km_tertiles.pdf`, `fig2b_cox_forest.pdf` | KM by tertiles; HR forest plot |
-| Figure 3 | `fig3_survival_cindex.pdf` | C-index by model |
-| Figure 4 | `fig4_rsf_importance.pdf` (+ `fig4b_rsf_shap_beeswarm.pdf`) | Out-of-fold importance |
-| Figure 5 | `fig5_mimic_calibration.pdf` | External calibration before/after recalibration [MIMIC] |
-| Figure 6 | `fig6_decision_curve_90d.pdf` | Decision curves |
-| Suppl. | `fig_s_simulation_leakage.pdf`, `fig_s_calibration_oof_90d.pdf`, replication and PH tables | — |
+| Figure 1 | `fig1_time_leakage` | (a) Follow-up by outcome; (b) MCC by feature set |
+| Figure 2 | `fig2a_km_tertiles`, `fig2b_cox_forest` | KM by tertiles; hazard-ratio forest plot |
+| Figure 3 | `fig3_survival_cindex` | C-index by model |
+| Figure 4 | `fig4_rsf_importance` (+ `fig4b_rsf_shap_beeswarm`) | Out-of-fold importance |
+| Figure 5 | `fig5_mimic_calibration` | External calibration [MIMIC] |
+| Figure 6 | `fig6_decision_curve_90d` | Decision curves |
+| Figure 7 | `fig_github_audit` | Use of `time` in public code |
+| Suppl. S1 | `replication_summary.csv`, `replication_vs_published.csv` | Replication |
+| Suppl. S2 | `fig_s_simulation_leakage`, `simulation_summary.csv` | Simulation |
+| Suppl. S3 | `github_audit_repos.csv`, `github_audit_verification*.csv` | Audit data and verification |
+| Suppl. S-Lit | `docs/manuscript/literature_review.md` §C | Literature extraction table |
+| Suppl. S4 | `table_s_ph_schoenfeld.csv`, `survival_bootstrap_optimism.csv`, `fig_s_calibration_oof_90d` | PH tests, optimism, calibration |
