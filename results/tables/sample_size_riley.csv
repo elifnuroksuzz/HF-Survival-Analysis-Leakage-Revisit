@@ -1,0 +1,2 @@
+n_params,r2_cs,r2_cs_max,shrinkage_target,criterion_i_shrinkage,criterion_ii_optimism,criterion_iii_precision,minimum_n,events_required,n_available,events_available,expected_shrinkage_at_n
+11,0.2421,0.9889,0.9000,351,189,245,351,113,299,96,0.8673

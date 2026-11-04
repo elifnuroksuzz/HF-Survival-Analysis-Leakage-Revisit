@@ -211,13 +211,13 @@ def main(argv=None) -> None:
                          "seed": C.RANDOM_SEED}, fh)
         print("[export] done")
 
-    if "summary" in args.stages:
-        print("[summary] written to", write_summary(P))
-
     log["elapsed_min"] = round((time.time() - t0) / 60, 2)
     log["stages"] = args.stages
     write_run_log("development" if set(args.stages) == set(STAGES) else
                   "development_partial", P.logs, **log)
+
+    if "summary" in args.stages:  # after logging, so this run appears in the summary
+        print("[summary] written to", write_summary(P))
     print(f"Finished in {log['elapsed_min']} min. Tables: {T}  Figures: {F}")
 
 

@@ -1,0 +1,7 @@
+model,tau,observed_km_risk,mean_predicted_risk,observed_expected_ratio,mean_abs_group_error
+Cox PH,90,0.2373,0.2307,1.0286,0.0610
+Random survival forest,90,0.2373,0.2356,1.0073,0.0651
+Gradient-boosted Cox,90,0.2373,0.2444,0.9709,0.0535
+Cox PH,180,0.3457,0.3325,1.0396,0.0757
+Random survival forest,180,0.3457,0.3366,1.0270,0.1019
+Gradient-boosted Cox,180,0.3457,0.3601,0.9601,0.0772

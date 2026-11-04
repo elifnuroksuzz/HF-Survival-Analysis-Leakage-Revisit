@@ -1,0 +1,10 @@
+model,reference,metric,mean_diff,ci_low,ci_high,t,p,n_resamples
+Cox PH (EF + SC),Cox PH,harrell_c,-0.0142,-0.0659,0.0376,-0.5498,0.5849,50
+Gradient-boosted Cox,Cox PH,harrell_c,0.0275,-0.0147,0.0697,1.3104,0.1962,50
+Random survival forest,Cox PH,harrell_c,0.0202,-0.0218,0.0622,0.9660,0.3388,50
+Cox PH (EF + SC),Cox PH,uno_c,0.0034,-0.0509,0.0576,0.1252,0.9008,50
+Gradient-boosted Cox,Cox PH,uno_c,0.0271,-0.0193,0.0735,1.1730,0.2465,50
+Random survival forest,Cox PH,uno_c,0.0307,-0.0182,0.0797,1.2613,0.2132,50
+Cox PH (EF + SC),Cox PH,ibs,0.0089,-0.0055,0.0233,1.2461,0.2187,50
+Gradient-boosted Cox,Cox PH,ibs,0.0013,-0.0128,0.0154,0.1896,0.8504,50
+Random survival forest,Cox PH,ibs,-0.0027,-0.0159,0.0105,-0.4102,0.6835,50

@@ -34,7 +34,7 @@ def write_summary(P: Paths) -> str:
         L += ["Runs contributing to these tables (append-only history):", ""]
         for line in hist.read_text().splitlines():
             j = json.loads(line)
-            if j.get("stage", "").startswith("development"):
+            if j.get("stage", "").startswith("development") and j.get("stages") != ["summary"]:
                 L.append(f"- {j.get('timestamp')} | quick={j.get('quick')} | stages="
                          f"{','.join(j.get('stages', ['all']))} | MC splits={j.get('n_monte_carlo')} | "
                          f"CV repeats={j.get('n_cv_repeats')}")

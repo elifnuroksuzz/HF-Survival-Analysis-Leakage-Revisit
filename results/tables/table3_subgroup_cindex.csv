@@ -1,0 +1,19 @@
+subgroup,n,events,exploratory,estimate,ci_low,ci_high,n_boot_valid,model
+Overall,299,96,False,0.7002,0.6454,0.7562,2000,Cox PH
+Female,105,34,False,0.6909,0.5912,0.7795,2000,Cox PH
+Male,194,62,False,0.7058,0.6403,0.7693,2000,Cox PH
+Age <65,184,46,False,0.6742,0.6014,0.7448,2000,Cox PH
+Age >=65,115,50,False,0.6900,0.6115,0.7645,2000,Cox PH
+"Female, age <65",65,20,False,0.7009,0.5907,0.7964,2000,Cox PH
+"Female, age >=65",40,14,True,0.6914,0.5150,0.8549,2000,Cox PH
+"Male, age <65",119,26,False,0.6469,0.5446,0.7456,2000,Cox PH
+"Male, age >=65",75,36,False,0.6848,0.5948,0.7692,2000,Cox PH
+Overall,299,96,False,0.7177,0.6631,0.7722,2000,Random survival forest
+Female,105,34,False,0.7405,0.6580,0.8158,2000,Random survival forest
+Male,194,62,False,0.7090,0.6360,0.7790,2000,Random survival forest
+Age <65,184,46,False,0.7074,0.6189,0.7898,2000,Random survival forest
+Age >=65,115,50,False,0.6816,0.5980,0.7616,2000,Random survival forest
+"Female, age <65",65,20,False,0.7754,0.6804,0.8596,2000,Random survival forest
+"Female, age >=65",40,14,True,0.6842,0.5198,0.8295,2000,Random survival forest
+"Male, age <65",119,26,False,0.6637,0.5353,0.7891,2000,Random survival forest
+"Male, age >=65",75,36,False,0.6783,0.5795,0.7740,2000,Random survival forest

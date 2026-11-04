@@ -1,0 +1,5 @@
+model,apparent_c,optimism,corrected_c,calibration_slope,calibration_slope_p2.5,calibration_slope_p97.5,n_boot
+Cox PH,0.7374,0.0320,0.7054,0.8319,0.6417,1.0891,200
+Cox PH (EF + SC),0.6876,0.0037,0.6839,0.9810,0.7061,1.2905,200
+Random survival forest,0.8009,0.0573,0.7436,0.8471,0.7309,0.9703,200
+Gradient-boosted Cox,0.8315,0.0688,0.7627,0.6812,0.4989,0.8349,200

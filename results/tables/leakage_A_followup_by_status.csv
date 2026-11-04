@@ -1,0 +1,3 @@
+group,n,median_days,q1,q3,share_<=30d,share_>150d
+Died (event time),96,44.5000,25.5000,102.2500,0.3646,0.1562
+Censored (censoring time),203,172.0000,95.0000,213.0000,0.0246,0.5025
