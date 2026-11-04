@@ -159,3 +159,56 @@ def calibration_plot(curves: dict[str, tuple[np.ndarray, np.ndarray]], n_bins: i
     ax.legend(frameon=False, fontsize=7)
     fig.tight_layout()
     return fig
+
+
+def decision_curve_plot(curves: dict[str, pd.DataFrame], tau: int):
+    fig, ax = plt.subplots(figsize=(4.4, 3.2))
+    first = next(iter(curves.values()))
+    ax.plot(first["threshold"], first["net_benefit_treat_all"], color="grey", lw=1, label="Treat all")
+    ax.axhline(0, color="black", lw=0.8, label="Treat none")
+    for (name, d), c in zip(curves.items(), OKABE_ITO):
+        ax.plot(d["threshold"], d["net_benefit_model"], color=c, lw=1.5, label=name)
+    top = max(d["net_benefit_model"].max() for d in curves.values())
+    ax.set_ylim(-0.05, max(top, first["net_benefit_treat_all"].max()) * 1.15)
+    ax.set_xlabel(f"Threshold probability ({tau}-day death)")
+    ax.set_ylabel("Net benefit")
+    ax.legend(frameon=False, fontsize=7)
+    fig.tight_layout()
+    return fig
+
+
+def horizon_calibration_plot(tables: dict[str, pd.DataFrame], tau: int):
+    fig, ax = plt.subplots(figsize=(3.4, 3.4))
+    lim = max(max(t["mean_predicted"].max(), t["observed_km"].max()) for t in tables.values()) * 1.1
+    ax.plot([0, lim], [0, lim], "k--", lw=0.8, label="Ideal")
+    for (name, t), c in zip(tables.items(), OKABE_ITO):
+        ax.plot(t["mean_predicted"], t["observed_km"], "o-", ms=4, color=c, label=name)
+    ax.set_xlim(0, lim)
+    ax.set_ylim(0, lim)
+    ax.set_xlabel(f"Predicted {tau}-day risk (out-of-fold)")
+    ax.set_ylabel(f"Observed {tau}-day risk (Kaplan-Meier)")
+    ax.legend(frameon=False, fontsize=7)
+    fig.tight_layout()
+    return fig
+
+
+def simulation_plot(res: pd.DataFrame, model: str = "Random forest"):
+    order = ["baseline", "time only", "baseline+time"]
+    scen = list(dict.fromkeys(res["scenario"]))
+    fig, axes = plt.subplots(1, len(scen), figsize=(3.4 * len(scen), 2.8), sharey=True)
+    for ax, s, tag in zip(np.atleast_1d(axes), scen, "abc"):
+        d = res[(res["scenario"] == s) & (res["model"] == model)]
+        data = [d.loc[d["feature_set"] == f, "MCC"].values for f in order]
+        bp = ax.boxplot(data, widths=0.55, patch_artist=True, showfliers=False)
+        for patch, c in zip(bp["boxes"], [OKABE_ITO[0], OKABE_ITO[4], OKABE_ITO[1]]):
+            patch.set_facecolor(c)
+            patch.set_alpha(0.75)
+        for med in bp["medians"]:
+            med.set_color("black")
+        ax.set_xticks(range(1, 4), ["Baseline", "Time only", "Baseline\n+ time"])
+        ax.axhline(0, color="grey", lw=0.6, ls=":")
+        ax.set_title(f"Simulated: {s}", fontsize=9)
+        ax.text(-0.12, 1.04, tag, transform=ax.transAxes, fontweight="bold", fontsize=11)
+    np.atleast_1d(axes)[0].set_ylabel(f"MCC ({model}, {res['sim'].nunique()} cohorts)")
+    fig.tight_layout()
+    return fig

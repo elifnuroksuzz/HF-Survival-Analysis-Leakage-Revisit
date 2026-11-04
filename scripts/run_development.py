@@ -8,7 +8,9 @@ Stages (run all by default):
   survival     Repeated 5x10 CV of survival models, Cox HRs, PH tests, KM curves
   explain      Out-of-fold permutation importance and SHAP
   fairness     Subgroup C-index on out-of-fold risk
+  simulation   Simulation study: leakage from `time` is structural (null effects)
   export       Fit final models on the full cohort for external validation
+  summary      Auto-generate results/RESULTS_SUMMARY.md with every manuscript number
 
 Usage:
   python scripts/run_development.py                 # full run (~15-30 min CPU)
@@ -30,12 +32,15 @@ from sklearn.base import clone
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from hfrevisit import config as C  # noqa: E402
-from hfrevisit import classification, explain, fairness, leakage, plotting, survival  # noqa: E402
+from hfrevisit import (classification, clinical_utility, explain, fairness, leakage,  # noqa: E402
+                       plotting, samplesize, simulation, survival)
+from hfrevisit.summary import write_summary  # noqa: E402
 from hfrevisit.data import load_cohort, set_seed, survival_target  # noqa: E402
 from hfrevisit.reporting import save_table, write_run_log  # noqa: E402
 from hfrevisit.stats import corrected_resampled_ttest, table_one  # noqa: E402
 
-STAGES = ["table1", "replication", "leakage", "survival", "explain", "fairness", "export"]
+STAGES = ["table1", "replication", "leakage", "survival", "explain", "fairness", "simulation",
+          "export", "summary"]
 
 
 def main(argv=None) -> None:
@@ -123,6 +128,32 @@ def main(argv=None) -> None:
         fig, p = plotting.km_by_tertile(df)
         plotting.save(fig, "fig2a_km_tertiles", F)
         log["km_logrank_p"] = p
+        # Paired model comparison on identical folds
+        save_table(pd.concat([survival.paired_model_comparison(met, metric=m)
+                              for m in ("harrell_c", "uno_c", "ibs")]), "survival_paired_comparison", T)
+        # Clinical utility and calibration of out-of-fold 90/180-day risk
+        dca, cal_tabs, cal_sum = {}, {}, []
+        for tau in (90, 180):
+            for model in ("Cox PH", "Random survival forest", "Gradient-boosted Cox"):
+                r = survival.oof_average(oof, model, f"risk_{tau}d", len(df))
+                d = clinical_utility.decision_curve(df[C.TIME].values, df[C.EVENT].values, r, tau)
+                tab, sm = clinical_utility.calibration_at_horizon(df[C.TIME].values, df[C.EVENT].values, r, tau)
+                save_table(d.assign(model=model, tau=tau), f"dca_{tau}d_{model.replace(' ', '_')}", T)
+                cal_sum.append({"model": model, **sm})
+                if tau == 90:
+                    dca[model], cal_tabs[model] = d, tab
+        save_table(pd.DataFrame(cal_sum), "calibration_oof_horizon_summary", T)
+        plotting.save(plotting.decision_curve_plot(dca, 90), "fig6_decision_curve_90d", F)
+        plotting.save(plotting.horizon_calibration_plot(cal_tabs, 90), "fig_s_calibration_oof_90d", F)
+        # Sample-size adequacy (Riley et al. 2019/2020)
+        _, _, cph = survival.cox_hazard_ratios(df)
+        lr = cph.log_likelihood_ratio_test().test_statistic
+        r2 = samplesize.apparent_cox_snell_r2(lr, len(df))
+        rate = df[C.EVENT].sum() / df[C.TIME].sum()
+        ss = samplesize.riley_survival(len(C.BASELINE_FEATURES), r2, rate, df[C.TIME].mean(), tau=90)
+        ss.update({"n_available": len(df), "events_available": int(df[C.EVENT].sum()),
+                   "expected_shrinkage_at_n": samplesize.expected_shrinkage(len(df), len(C.BASELINE_FEATURES), r2)})
+        save_table(pd.DataFrame([ss]), "sample_size_riley", T)
         print("[survival] done")
 
     if "explain" in args.stages:
@@ -159,6 +190,13 @@ def main(argv=None) -> None:
         save_table(pd.concat(tabs), "table3_subgroup_cindex", T)
         print("[fairness] done")
 
+    if "simulation" in args.stages:
+        sim = simulation.run_simulation(df, n_sim=20 if args.quick else 200)
+        save_table(sim, "simulation_per_cohort", T)
+        save_table(simulation.summarize_simulation(sim), "simulation_summary", T)
+        plotting.save(plotting.simulation_plot(sim), "fig_s_simulation_leakage", F)
+        print("[simulation] done")
+
     if "export" in args.stages:
         y = survival_target(df)
         fitted = {name: (feats, clone(tmpl).fit(df[feats], y)) for name, (feats, tmpl) in models.items()}
@@ -166,6 +204,9 @@ def main(argv=None) -> None:
             pickle.dump({"models": fitted, "cpk_median": float(df["creatinine_phosphokinase"].median()),
                          "seed": C.RANDOM_SEED}, fh)
         print("[export] done")
+
+    if "summary" in args.stages:
+        print("[summary] written to", write_summary(P))
 
     log["elapsed_min"] = round((time.time() - t0) / 60, 2)
     write_run_log("development", P.logs, **log)

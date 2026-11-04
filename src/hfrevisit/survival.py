@@ -116,6 +116,7 @@ def evaluate_fold(model, X_te: pd.DataFrame, y_tr: np.ndarray, y_te: np.ndarray,
 def cross_validate(df: pd.DataFrame, models: dict | None = None, n_splits: int = 5,
                    n_repeats: int = 10, seed: int = C.RANDOM_SEED,
                    extra_models: dict[str, tuple[list[str], Callable]] | None = None,
+                   horizon_risks: tuple[float, ...] = (90.0, 180.0),
                    ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Repeated stratified K-fold CV (stratified on the event indicator).
 
@@ -140,8 +141,35 @@ def cross_validate(df: pd.DataFrame, models: dict | None = None, n_splits: int =
             met = evaluate_fold(m, X.iloc[te], y[tr], y[te])
             rows.append({"repeat": rep, "fold": fold, "model": name, **met})
             risk = np.asarray(m.predict(X.iloc[te]), dtype=float)
-            oof.append(pd.DataFrame({"repeat": rep, "model": name, "row": te, "risk": risk}))
+            frame = {"repeat": rep, "model": name, "row": te, "risk": risk}
+            if hasattr(m, "predict_survival_function"):
+                for h in horizon_risks:
+                    frame[f"risk_{int(h)}d"] = 1.0 - _surv_matrix(m, X.iloc[te], np.array([h]))[:, 0]
+            oof.append(pd.DataFrame(frame))
     return pd.DataFrame(rows), pd.concat(oof, ignore_index=True)
+
+
+def paired_model_comparison(metrics: pd.DataFrame, reference: str = "Cox PH",
+                            metric: str = "harrell_c", n: int = 299, n_splits: int = 5) -> pd.DataFrame:
+    """Corrected resampled t-test (Nadeau-Bengio) of each model vs ``reference``
+    using the per-fold metric on identical folds."""
+    from .stats import corrected_resampled_ttest
+
+    wide = metrics.pivot_table(index=["repeat", "fold"], columns="model", values=metric)
+    n_test = n // n_splits
+    rows = []
+    for m in wide.columns:
+        if m == reference:
+            continue
+        r = corrected_resampled_ttest(wide[m] - wide[reference], n - n_test, n_test)
+        rows.append({"model": m, "reference": reference, "metric": metric, **r})
+    return pd.DataFrame(rows)
+
+
+def oof_average(oof: pd.DataFrame, model: str, column: str, n: int) -> np.ndarray:
+    """Average a per-patient out-of-fold quantity over CV repeats."""
+    r = oof[oof["model"] == model]
+    return r.groupby("row")[column].mean().reindex(range(n)).values
 
 
 def summarize_cv(metrics: pd.DataFrame) -> pd.DataFrame:
