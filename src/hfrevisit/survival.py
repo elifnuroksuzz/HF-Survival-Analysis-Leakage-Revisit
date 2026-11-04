@@ -237,3 +237,53 @@ def cox_hazard_ratios(df: pd.DataFrame, features: list[str] | None = None,
     ph = proportional_hazard_test(cph, d, time_transform="rank").summary
     ph = ph.rename(columns={"test_statistic": "chi2"})[["chi2", "p"]]
     return hr, ph, cph
+
+
+# --------------------------------------------------------------------------
+# Bootstrap internal validation (Harrell, Lee & Mark 1996; Steyerberg 2019)
+# --------------------------------------------------------------------------
+def bootstrap_optimism(df: pd.DataFrame, models: dict | None = None, n_boot: int = 200,
+                       seed: int = C.RANDOM_SEED) -> pd.DataFrame:
+    """Optimism-corrected Harrell's C and bootstrap calibration slope.
+
+    For each bootstrap sample b: fit the model on b, compute C on b
+    (apparent_b) and on the original data (test_b). Optimism is the mean of
+    apparent_b - test_b. The calibration slope is the Cox coefficient of the
+    standardised bootstrap-model risk score in the original data; values < 1
+    indicate overfitting and estimate the uniform shrinkage required.
+    """
+    from lifelines import CoxPHFitter
+
+    models = models or make_survival_models(seed)
+    y = survival_target(df)
+    rng = np.random.default_rng(seed)
+    idx_all = [rng.integers(0, len(df), len(df)) for _ in range(n_boot)]
+    rows = []
+    for name, (feats, tmpl) in models.items():
+        X = df[feats]
+        full = clone(tmpl).fit(X, y)
+        apparent = concordance_index_censored(y["event"], y["time"], full.predict(X))[0]
+        opt, slopes = [], []
+        for b in idx_all:
+            m = clone(tmpl).fit(X.iloc[b], y[b])
+            c_b = concordance_index_censored(y[b]["event"], y[b]["time"], m.predict(X.iloc[b]))[0]
+            lp = np.asarray(m.predict(X), dtype=float)
+            c_o = concordance_index_censored(y["event"], y["time"], lp)[0]
+            opt.append(c_b - c_o)
+            # slope of the bootstrap model's linear predictor (on its own scale,
+            # standardised by its SD in the bootstrap sample) in the original data
+            lp_b = np.asarray(m.predict(X.iloc[b]), dtype=float)
+            z = (lp - lp_b.mean()) / lp_b.std()
+            d = pd.DataFrame({"z": z, "T": y["time"], "E": y["event"].astype(int)})
+            z_b = (lp_b - lp_b.mean()) / lp_b.std()
+            db = pd.DataFrame({"z": z_b, "T": y[b]["time"], "E": y[b]["event"].astype(int)})
+            beta_app = CoxPHFitter().fit(db, "T", "E").params_["z"]
+            beta_test = CoxPHFitter().fit(d, "T", "E").params_["z"]
+            slopes.append(beta_test / beta_app)
+        rows.append({"model": name, "apparent_c": apparent, "optimism": float(np.mean(opt)),
+                     "corrected_c": apparent - float(np.mean(opt)),
+                     "calibration_slope": float(np.mean(slopes)),
+                     "calibration_slope_p2.5": float(np.percentile(slopes, 2.5)),
+                     "calibration_slope_p97.5": float(np.percentile(slopes, 97.5)),
+                     "n_boot": n_boot})
+    return pd.DataFrame(rows)

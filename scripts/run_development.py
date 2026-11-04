@@ -8,6 +8,7 @@ Stages (run all by default):
   survival     Repeated 5x10 CV of survival models, Cox HRs, PH tests, KM curves
   explain      Out-of-fold permutation importance and SHAP
   fairness     Subgroup C-index on out-of-fold risk
+  optimism     Bootstrap optimism-corrected C and calibration slope (Harrell)
   simulation   Simulation study: leakage from `time` is structural (null effects)
   export       Fit final models on the full cohort for external validation
   summary      Auto-generate results/RESULTS_SUMMARY.md with every manuscript number
@@ -39,8 +40,8 @@ from hfrevisit.data import load_cohort, set_seed, survival_target  # noqa: E402
 from hfrevisit.reporting import save_table, write_run_log  # noqa: E402
 from hfrevisit.stats import corrected_resampled_ttest, table_one  # noqa: E402
 
-STAGES = ["table1", "replication", "leakage", "survival", "explain", "fairness", "simulation",
-          "export", "summary"]
+STAGES = ["table1", "replication", "leakage", "survival", "explain", "fairness", "optimism",
+          "simulation", "export", "summary"]
 
 
 def main(argv=None) -> None:
@@ -190,6 +191,11 @@ def main(argv=None) -> None:
         save_table(pd.concat(tabs), "table3_subgroup_cindex", T)
         print("[fairness] done")
 
+    if "optimism" in args.stages:
+        opt = survival.bootstrap_optimism(df, n_boot=50 if args.quick else 500)
+        save_table(opt, "survival_bootstrap_optimism", T)
+        print("[optimism] done")
+
     if "simulation" in args.stages:
         sim = simulation.run_simulation(df, n_sim=20 if args.quick else 200)
         save_table(sim, "simulation_per_cohort", T)
@@ -209,7 +215,9 @@ def main(argv=None) -> None:
         print("[summary] written to", write_summary(P))
 
     log["elapsed_min"] = round((time.time() - t0) / 60, 2)
-    write_run_log("development", P.logs, **log)
+    log["stages"] = args.stages
+    write_run_log("development" if set(args.stages) == set(STAGES) else
+                  "development_partial", P.logs, **log)
     print(f"Finished in {log['elapsed_min']} min. Tables: {T}  Figures: {F}")
 
 

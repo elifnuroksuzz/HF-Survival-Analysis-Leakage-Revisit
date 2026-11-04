@@ -102,6 +102,16 @@ def write_summary(P: Paths) -> str:
                      f"[{_f(r.ci_low)}, {_f(r.ci_high)}], p={_p(r.p)}")
         L.append("")
 
+    bo = _read(P, "survival_bootstrap_optimism")
+    if bo is not None:
+        L += ["Bootstrap internal validation (Harrell):", ""]
+        for _, r in bo.iterrows():
+            L.append(f"- {r['model']}: apparent C {_f(r.apparent_c)}, optimism {_f(r.optimism)}, "
+                     f"corrected C {_f(r.corrected_c)}; calibration slope {_f(r.calibration_slope, 2)} "
+                     f"[{_f(r['calibration_slope_p2.5'], 2)}, {_f(r['calibration_slope_p97.5'], 2)}] "
+                     f"(B={int(r.n_boot)})")
+        L.append("")
+
     hr = _read(P, "table2_cox_hazard_ratios")
     if hr is not None:
         L += ["## Cox hazard ratios (full cohort)", ""]

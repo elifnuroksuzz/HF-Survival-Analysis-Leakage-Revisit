@@ -42,4 +42,6 @@ def write_run_log(stage: str, outdir: Path, **extra) -> Path:
            "environment": environment(), **extra}
     p = outdir / f"{stage}_run_log.json"
     p.write_text(json.dumps(log, indent=2, default=str))
+    with open(outdir / "run_history.jsonl", "a") as fh:  # append-only provenance
+        fh.write(json.dumps(log, default=str) + "\n")
     return p

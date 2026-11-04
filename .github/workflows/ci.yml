@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install
+        run: pip install -e ".[dev]"
+      - name: Download public dataset (SHA-256 verified by the loader)
+        run: |
+          mkdir -p data
+          curl -fsSL -o data/heart_failure_clinical_records_dataset.csv \
+            https://archive.ics.uci.edu/ml/machine-learning-databases/00519/heart_failure_clinical_records_dataset.csv
+      - name: Unit tests
+        run: pytest -q
+      - name: Smoke-run the development pipeline
+        run: python scripts/run_development.py --quick --stages table1 leakage survival optimism export summary

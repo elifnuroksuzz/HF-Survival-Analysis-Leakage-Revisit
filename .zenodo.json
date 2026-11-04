@@ -1,0 +1,7 @@
+{
+  "title": "HF-Survival-Analysis-Leakage-Revisit: code for target-leakage, survival re-analysis and MIMIC-III external validation",
+  "upload_type": "software",
+  "license": "MIT",
+  "keywords": ["heart failure", "survival analysis", "target leakage", "external validation", "MIMIC-III"],
+  "creators": [{"name": "TODO: Surname, Given name", "orcid": "TODO"}]
+}

@@ -108,3 +108,17 @@ def test_external_evaluation_end_to_end():
     res, preds = ev.evaluate(df, models, tau=90, n_boot=20)
     assert {"harrell_c", "td_auc_90d", "cal_slope"} <= set(res.columns)
     assert all(((p >= 0) & (p <= 1)).all() for p in preds.values())
+
+
+def test_ef_annotation_scoring():
+    from hfrevisit.mimic.ef_validation import sample_for_annotation, score_annotation
+
+    raw = _synthetic_raw(50)["echo"]
+    raw.loc[:4, "note_text"] = "No measurement reported."
+    sheet = sample_for_annotation(raw, n=30)
+    truth = sheet["note_text"].str.extract(r"LVEF = (\d+)%")[0].fillna("NA")
+    sheet["ef_manual_a"] = truth
+    sheet["ef_manual_b"] = truth
+    r = score_annotation(sheet.astype({"ef_manual_a": str, "ef_manual_b": str}))
+    assert r["parser_mae"] == 0 and r["parser_detection_sensitivity"] == 1
+    assert r["interrater_category_agreement"] == 1
