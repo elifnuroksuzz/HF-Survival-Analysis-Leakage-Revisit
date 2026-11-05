@@ -75,3 +75,51 @@ def test_cohort_integrity_and_shuffle():
     assert df.shape == (299, 13)
     assert df[C.EVENT].sum() == 96
     assert not df[C.TIME].is_monotonic_increasing  # loader de-sorts the file
+
+
+def test_download_falls_back_to_hash_verified_mirror(tmp_path, monkeypatch):
+    import io
+    import urllib.request
+    import zipfile
+
+    from hfrevisit import config as C
+    from hfrevisit import data as D
+
+    good = C.get_paths().data_file
+    if not good.exists():
+        pytest.skip("dataset not downloaded")
+    payload = good.read_bytes()
+    zbuf = io.BytesIO()
+    with zipfile.ZipFile(zbuf, "w") as z:
+        z.writestr(C.DATA_FILE, payload)
+    responses = {"https://m/404": None, "https://m/bad": b"age,x\n1,2\n", "https://m/zip": zbuf.getvalue()}
+
+    class R(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    def fake_urlopen(req, timeout=None):
+        body = responses[req.full_url]
+        if body is None:
+            raise OSError("HTTP Error 404")
+        return R(body)
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    dest = tmp_path / C.DATA_FILE
+    D.download_dataset(dest, urls=("https://m/404", "https://m/bad", "https://m/zip"))
+    assert D.sha256(dest) == C.DATA_SHA256
+    with pytest.raises(RuntimeError):
+        D.download_dataset(tmp_path / "other.csv", urls=("https://m/404", "https://m/bad"))
+    assert not (tmp_path / "other.csv").exists()
+
+
+def test_summary_on_fresh_output_root(tmp_path):
+    """Colab writes outputs to a Drive folder that has none of the committed tables."""
+    from hfrevisit.summary import write_summary
+
+    out = write_summary(C.get_paths(tmp_path))
+    text = open(out).read()
+    assert "Results summary" in text

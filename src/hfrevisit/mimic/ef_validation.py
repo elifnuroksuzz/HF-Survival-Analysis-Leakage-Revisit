@@ -42,7 +42,28 @@ def sample_for_annotation(echo: pd.DataFrame, n: int = 200, seed: int = 42) -> p
 
 
 def _num(col: pd.Series) -> np.ndarray:
-    return pd.to_numeric(col.replace({"NA": np.nan, "": np.nan}), errors="coerce").values
+    """Numbers typed by annotators: accepts "NA"/blank and decimal commas ("55,5")."""
+    txt = col.astype("string").str.strip().str.replace("%", "", regex=False).str.replace(",", ".", regex=False)
+    return pd.to_numeric(txt.mask(txt.str.upper().isin(["NA", "N/A", "", "-", "NAN"])),
+                         errors="coerce").to_numpy(dtype=float, na_value=np.nan)
+
+
+REQUIRED_COLUMNS = ("ef_parser", "sampling_weight", "ef_manual_a", "ef_manual_b")
+
+
+def read_annotation_sheet(path) -> pd.DataFrame:
+    """Read the sheet whether saved with ',' or ';' (Excel in Turkish/European locales)."""
+    with open(path, encoding="utf-8-sig", errors="replace") as fh:
+        header = fh.readline()
+    seps = sorted((",", ";", "\t"), key=header.count, reverse=True)  # header has no free text
+    for sep in seps:
+        try:
+            d = pd.read_csv(path, sep=sep, dtype=str, keep_default_na=False, encoding="utf-8-sig")
+        except pd.errors.ParserError:
+            continue
+        if set(REQUIRED_COLUMNS) <= set(d.columns):
+            return d
+    raise ValueError(f"{path}: columns {REQUIRED_COLUMNS} not found; keep the header row unchanged.")
 
 
 def score_annotation(sheet: pd.DataFrame) -> dict:
@@ -51,8 +72,8 @@ def score_annotation(sheet: pd.DataFrame) -> dict:
     Estimates are weighted by inverse sampling weight to represent all reports.
     """
     a, b = _num(sheet["ef_manual_a"]), _num(sheet["ef_manual_b"])
-    p = sheet["ef_parser"].astype(float).values
-    w = 1.0 / sheet["sampling_weight"].astype(float).values
+    p = _num(sheet["ef_parser"])
+    w = 1.0 / _num(sheet["sampling_weight"])
     both = np.isfinite(a) & np.isfinite(b)
     ref = np.where(both, (a + b) / 2, np.where(np.isfinite(a), a, b))
     has_ref, has_p = np.isfinite(ref), np.isfinite(p)

@@ -74,9 +74,12 @@ python scripts/run_development.py --quick               # smoke test, a few minu
 ```
 
 The dataset (UCI ML Repository / Kaggle `andrewmvd/heart-failure-clinical-data`)
-is verified against SHA-256 `9c73cea7…dd75912`. On Google Colab, open
-`notebooks/01_development_analyses.ipynb`; set `HF_PROJECT_ROOT` to a Drive
-folder so that outputs persist.
+is verified against SHA-256 `9c73cea7…dd75912`; `--download` tries UCI and two
+GitHub mirrors and accepts a copy only if the hash matches.
+
+**Google Colab.** Both notebooks clone the code, install it, and write all outputs
+to `MyDrive/HF_Revisit_Project/`, so a disconnect loses nothing. Step-by-step guide
+(Turkish): [`docs/COLAB_CALISTIRMA_TR.md`](docs/COLAB_CALISTIRMA_TR.md).
 
 ### External validation (MIMIC-III v1.4)
 

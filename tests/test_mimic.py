@@ -41,7 +41,7 @@ def test_sql_design_choices():
     assert "50911" not in labs  # CK-MB is not CPK
     assert "INTERVAL 6 HOUR" in labs
     echo = queries.echo_sql()
-    assert "during_index_stay" in echo and "DATE(idx.DISCHTIME)" in echo
+    assert "during_index_stay" in echo and "CAST(idx.DISCHTIME AS DATE)" in echo
 
 
 def _synthetic_raw(n=400, seed=0):
@@ -122,3 +122,52 @@ def test_ef_annotation_scoring():
     r = score_annotation(sheet.astype({"ef_manual_a": str, "ef_manual_b": str}))
     assert r["parser_mae"] == 0 and r["parser_detection_sensitivity"] == 1
     assert r["interrater_category_agreement"] == 1
+
+
+def test_bigquery_output_normalisation_and_cache_roundtrip(tmp_path):
+    """Lower-case column names and db-dtypes dates (as pandas-gbq returns them)."""
+    db_dtypes = pytest.importorskip("db_dtypes")  # noqa: F841
+    from hfrevisit.mimic.cohort import normalise_columns, read_cache
+
+    raw = pd.DataFrame({"hadm_id": pd.array([1, 2], dtype="Int64"),
+                        "chartdate": pd.array(["2150-01-01", None], dtype="dbdate"),
+                        "Days_From_Admission": [0, -3], "NOTE_TEXT": ["LVEF 50%", "x"]})
+    d = normalise_columns(raw)
+    assert list(d.columns) == ["HADM_ID", "CHARTDATE", "days_from_admission", "note_text"]
+    assert str(d["CHARTDATE"].dtype).startswith("datetime64")
+    d.to_parquet(tmp_path / "c.parquet", index=False)
+    back = read_cache(tmp_path / "c.parquet")
+    assert back["CHARTDATE"].isna().tolist() == [False, True]
+
+
+def test_annotation_sheet_roundtrip_excel_locales(tmp_path):
+    from hfrevisit.mimic.ef_validation import (read_annotation_sheet, sample_for_annotation,
+                                               score_annotation)
+
+    raw = _synthetic_raw(60)["echo"]
+    raw.loc[:9, "note_text"] = "No measurement reported."
+    sheet = sample_for_annotation(raw, n=40)
+    truth = sheet["note_text"].str.extract(r"LVEF = (\d+)%")[0]
+    sheet["ef_manual_a"] = truth.fillna("NA")
+    sheet["ef_manual_b"] = truth.fillna("")            # blank instead of NA
+    f1 = tmp_path / "comma.csv"
+    sheet.to_csv(f1, index=False)
+    f2 = tmp_path / "semicolon.csv"                    # Excel (Turkish locale) style
+    sheet.assign(sampling_weight=sheet["sampling_weight"].astype(str).str.replace(".", ",", regex=False),
+                 ef_manual_a=sheet["ef_manual_a"].str.replace("NA", "na")).to_csv(f2, sep=";", index=False)
+    for f in (f1, f2):
+        r = score_annotation(read_annotation_sheet(f))
+        assert r["parser_mae"] == 0 and r["parser_detection_sensitivity"] == 1
+
+
+def test_sql_is_type_portable():
+    for name, build in queries.ALL_QUERIES.items():
+        sql = build()
+        assert "DATETIME_DIFF" not in sql and "USING (" not in sql, name
+        assert "DATE(idx." not in sql.replace("AS DATE)", ""), name
+    try:
+        import sqlglot
+    except ImportError:
+        return
+    for build in queries.ALL_QUERIES.values():
+        sqlglot.parse_one(build(), read="bigquery")

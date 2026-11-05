@@ -26,6 +26,16 @@ UCI_URL = (
     "https://archive.ics.uci.edu/ml/machine-learning-databases/00519/"
     "heart_failure_clinical_records_dataset.csv"
 )
+#: Mirrors tried in order by ``data.download_dataset``; any copy is accepted
+#: only if its SHA-256 equals DATA_SHA256, so a mirror cannot alter the data.
+DATA_URLS: tuple[str, ...] = (
+    UCI_URL,
+    "https://archive.ics.uci.edu/static/public/519/heart+failure+clinical+records.zip",
+    "https://raw.githubusercontent.com/wwu-mmll/photonai/master/examples/heart_failure/"
+    "heart_failure_clinical_records_dataset.csv",
+    "https://raw.githubusercontent.com/chelseaparlett/CPSC392ParlettPelleriti/master/Data/"
+    "heart_failure_clinical_records_dataset.csv",
+)
 # SHA-256 of the canonical 299-row file (verified against the UCI/Kaggle copy).
 DATA_SHA256 = "9c73cea7468ff5d517801ec050fe9993da5912fce4b56f296f8df3b38dd75912"
 
@@ -109,10 +119,16 @@ class Paths:
         return self.data / DATA_FILE
 
 
+#: Repository checkout (holds the committed reference data and audit tables,
+#: which stay here even when outputs go to an external HF_PROJECT_ROOT).
+REPO_ROOT: Path = Path(__file__).resolve().parents[2]
+REFERENCE_DIR: Path = REPO_ROOT / "data" / "reference"
+
+
 def get_paths(root: str | os.PathLike | None = None) -> Paths:
     """Return project paths (``root`` > ``$HF_PROJECT_ROOT`` > repository root)."""
     if root is None:
         root = os.environ.get("HF_PROJECT_ROOT")
     if root is None:
-        root = Path(__file__).resolve().parents[2]
+        root = REPO_ROOT
     return Paths(Path(root)).make()

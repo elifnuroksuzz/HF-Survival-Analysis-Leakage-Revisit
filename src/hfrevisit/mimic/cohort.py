@@ -23,6 +23,31 @@ RANGES = {
 ANAEMIA_HCT_THRESHOLD = 36.0
 
 
+#: Columns referenced in upper case by the Python code; all others are lower case.
+_UPPER_COLUMNS = {"SUBJECT_ID", "HADM_ID", "ADMITTIME", "DISCHTIME", "ETHNICITY",
+                  "ADMISSION_TYPE", "DOD", "CHARTDATE"}
+
+
+def normalise_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Make column names independent of the case BigQuery returned them in, and
+    turn BigQuery extension dtypes (``dbdate``/``dbtime``) into plain pandas
+    dtypes so the parquet cache can be read without ``db-dtypes``."""
+    df = df.rename(columns=lambda c: c.upper() if c.upper() in _UPPER_COLUMNS else c.lower())
+    for col in df.columns:
+        if str(df[col].dtype) in ("dbdate", "dbtime"):
+            df[col] = pd.to_datetime(df[col].astype("string"), errors="coerce")
+    return df
+
+
+def read_cache(path: Path) -> pd.DataFrame:
+    """Read one cached extraction (also caches written by older versions)."""
+    try:
+        import db_dtypes  # noqa: F401 - registers dbdate for old caches
+    except ImportError:
+        pass
+    return normalise_columns(pd.read_parquet(path))
+
+
 def run_queries(gcp_project: str, cache_dir: Path, physionet_project: str = "physionet-data",
                 refresh: bool = False) -> dict[str, pd.DataFrame]:
     """Execute the four extraction queries (cached as parquet in ``cache_dir``).
@@ -37,10 +62,22 @@ def run_queries(gcp_project: str, cache_dir: Path, physionet_project: str = "phy
     for name, builder in queries.ALL_QUERIES.items():
         f = cache_dir / f"mimic_{name}.parquet"
         if f.exists() and not refresh:
-            out[name] = pd.read_parquet(f)
+            out[name] = read_cache(f)
             continue
-        df = pandas_gbq.read_gbq(builder(physionet_project), project_id=gcp_project,
-                                 progress_bar_type=None, location="US")
+        print(f"[mimic] running BigQuery query '{name}' ...", flush=True)
+        try:
+            df = pandas_gbq.read_gbq(builder(physionet_project), project_id=gcp_project,
+                                     progress_bar_type=None, location="US")
+        except Exception as exc:
+            raise RuntimeError(
+                f"BigQuery query '{name}' failed: {exc}\n\nCheck that (1) you signed in with the "
+                f"Google account that PhysioNet granted MIMIC-III BigQuery access to, and (2) "
+                f"'{gcp_project}' is a Google Cloud project ID that this account can run "
+                f"BigQuery jobs in (console.cloud.google.com, project selector).") from exc
+        df = normalise_columns(df)
+        print(f"[mimic]   {len(df):,} rows", flush=True)
+        if df.empty:
+            raise RuntimeError(f"BigQuery query '{name}' returned no rows; check MIMIC-III access.")
         df.to_parquet(f, index=False)
         out[name] = df
     return out

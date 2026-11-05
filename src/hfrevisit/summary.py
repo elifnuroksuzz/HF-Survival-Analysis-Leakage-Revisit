@@ -8,6 +8,7 @@ import json
 import numpy as np
 import pandas as pd
 
+from . import config as C
 from .config import Paths
 
 
@@ -21,6 +22,9 @@ def _p(p):
 
 def _read(P: Paths, name: str) -> pd.DataFrame | None:
     f = P.tables / f"{name}.csv"
+    if not f.exists() and name.startswith("github_audit"):
+        # the audit is not re-run by the notebooks; use the committed tables
+        f = C.REPO_ROOT / "results" / "tables" / f"{name}.csv"
     return pd.read_csv(f) if f.exists() else None
 
 

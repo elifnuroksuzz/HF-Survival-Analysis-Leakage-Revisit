@@ -19,6 +19,11 @@ Design decisions (each one fixes a problem in the original notebooks):
 6. **Outcomes**: in-hospital death and all-cause death from admission using
    ``PATIENTS.DOD`` (hospital + Social Security death records), so that a
    time-to-event endpoint comparable to the development cohort is available.
+
+Portability: every date/time column is CAST explicitly (``AS DATE`` /
+``AS DATETIME``) so the SQL is valid whether a BigQuery release stores it as
+DATE, DATETIME or TIMESTAMP, and every output column has an explicit alias so
+its name does not depend on the case used in the table schema.
 """
 
 from __future__ import annotations
@@ -44,9 +49,11 @@ def _ds(project: str = "physionet-data") -> tuple[str, str]:
 def index_cte(clinical: str) -> str:
     return f"""
 hf_adm AS (
-  SELECT a.SUBJECT_ID, a.HADM_ID, a.ADMITTIME, a.DISCHTIME, a.HOSPITAL_EXPIRE_FLAG,
-         a.ETHNICITY, a.ADMISSION_TYPE,
-         ROW_NUMBER() OVER (PARTITION BY a.SUBJECT_ID ORDER BY a.ADMITTIME) AS rn
+  SELECT a.SUBJECT_ID AS SUBJECT_ID, a.HADM_ID AS HADM_ID,
+         CAST(a.ADMITTIME AS DATETIME) AS ADMITTIME, CAST(a.DISCHTIME AS DATETIME) AS DISCHTIME,
+         a.HOSPITAL_EXPIRE_FLAG AS HOSPITAL_EXPIRE_FLAG,
+         a.ETHNICITY AS ETHNICITY, a.ADMISSION_TYPE AS ADMISSION_TYPE,
+         ROW_NUMBER() OVER (PARTITION BY a.SUBJECT_ID ORDER BY a.ADMITTIME, a.HADM_ID) AS rn
   FROM `{clinical}.admissions` a
   WHERE a.HADM_ID IN (SELECT HADM_ID FROM `{clinical}.diagnoses_icd`
                       WHERE ICD9_CODE LIKE '428%')
@@ -59,15 +66,17 @@ def cohort_sql(project: str = "physionet-data") -> str:
     return f"""
 WITH {index_cte(clinical)}
 SELECT
-  idx.SUBJECT_ID, idx.HADM_ID, idx.ADMITTIME, idx.DISCHTIME, idx.ETHNICITY, idx.ADMISSION_TYPE,
-  CASE WHEN DATETIME_DIFF(idx.ADMITTIME, p.DOB, DAY) / 365.2425 > 89 THEN 90.0
-       ELSE DATETIME_DIFF(idx.ADMITTIME, p.DOB, DAY) / 365.2425 END AS age,
+  idx.SUBJECT_ID AS SUBJECT_ID, idx.HADM_ID AS HADM_ID,
+  idx.ADMITTIME AS ADMITTIME, idx.DISCHTIME AS DISCHTIME,
+  idx.ETHNICITY AS ETHNICITY, idx.ADMISSION_TYPE AS ADMISSION_TYPE,
+  CASE WHEN DATE_DIFF(CAST(idx.ADMITTIME AS DATE), CAST(p.DOB AS DATE), DAY) / 365.2425 > 89 THEN 90.0
+       ELSE DATE_DIFF(CAST(idx.ADMITTIME AS DATE), CAST(p.DOB AS DATE), DAY) / 365.2425 END AS age,
   IF(p.GENDER = 'M', 1, 0)                         AS sex,
-  idx.HOSPITAL_EXPIRE_FLAG                         AS in_hospital_death,
-  p.DOD,
-  DATE_DIFF(DATE(p.DOD), DATE(idx.ADMITTIME), DAY) AS days_to_death
+  CAST(idx.HOSPITAL_EXPIRE_FLAG AS INT64)          AS in_hospital_death,
+  CAST(p.DOD AS DATE)                              AS DOD,
+  DATE_DIFF(CAST(p.DOD AS DATE), CAST(idx.ADMITTIME AS DATE), DAY) AS days_to_death
 FROM idx
-JOIN `{clinical}.patients` p USING (SUBJECT_ID)
+JOIN `{clinical}.patients` p ON p.SUBJECT_ID = idx.SUBJECT_ID
 """
 
 
@@ -83,7 +92,8 @@ WITH {index_cte(clinical)},
 labs AS (
   -- labs are matched on SUBJECT_ID + time window because pre-admission
   -- (emergency department) draws carry a NULL HADM_ID
-  SELECT idx.HADM_ID, l.CHARTTIME, l.VALUENUM,
+  SELECT idx.HADM_ID AS HADM_ID, CAST(l.CHARTTIME AS DATETIME) AS CHARTTIME,
+    CAST(l.VALUENUM AS FLOAT64) AS VALUENUM,
     CASE
 {cases}
     END AS label
@@ -91,8 +101,8 @@ labs AS (
   JOIN idx ON l.SUBJECT_ID = idx.SUBJECT_ID
   WHERE l.ITEMID IN ({all_ids})
     AND l.VALUENUM IS NOT NULL AND l.VALUENUM > 0
-    AND l.CHARTTIME BETWEEN DATETIME_SUB(idx.ADMITTIME, INTERVAL 6 HOUR)
-                        AND DATETIME_ADD(idx.ADMITTIME, INTERVAL 24 HOUR)
+    AND CAST(l.CHARTTIME AS DATETIME) BETWEEN DATETIME_SUB(idx.ADMITTIME, INTERVAL 6 HOUR)
+                                          AND DATETIME_ADD(idx.ADMITTIME, INTERVAL 24 HOUR)
 ),
 first_lab AS (
   SELECT * EXCEPT(rn) FROM (
@@ -100,9 +110,9 @@ first_lab AS (
                                       ORDER BY labs.CHARTTIME) AS rn
     FROM labs) WHERE rn = 1
 )
-SELECT idx.HADM_ID,
+SELECT idx.HADM_ID AS HADM_ID,
   {pivots}
-FROM idx LEFT JOIN first_lab USING (HADM_ID)
+FROM idx LEFT JOIN first_lab ON first_lab.HADM_ID = idx.HADM_ID
 GROUP BY idx.HADM_ID
 """
 
@@ -116,11 +126,11 @@ def comorbidity_sql(project: str = "physionet-data") -> str:
     smk = ", ".join(f"'{c}'" for c in SMOKING_CODES)
     return f"""
 WITH {index_cte(clinical)}
-SELECT idx.HADM_ID,
+SELECT idx.HADM_ID AS HADM_ID,
   MAX(IF({prefix_any(DM_PREFIX, 3)}, 1, 0))  AS diabetes,
   MAX(IF({prefix_any(HTN_PREFIX, 3)}, 1, 0)) AS high_blood_pressure,
   MAX(IF(SUBSTR(d.ICD9_CODE, 1, 4) IN ({smk}) OR d.ICD9_CODE IN ({smk}), 1, 0)) AS smoking
-FROM idx LEFT JOIN `{clinical}.diagnoses_icd` d USING (HADM_ID)
+FROM idx LEFT JOIN `{clinical}.diagnoses_icd` d ON d.HADM_ID = idx.HADM_ID
 GROUP BY idx.HADM_ID
 """
 
@@ -130,17 +140,20 @@ def echo_sql(project: str = "physionet-data", lookback_days: int = 365) -> str:
     clinical, notes = _ds(project)
     return f"""
 WITH {index_cte(clinical)}
-SELECT idx.HADM_ID, n.ROW_ID AS note_id, n.CHARTDATE, n.HADM_ID AS note_hadm_id,
-  DATE_DIFF(n.CHARTDATE, DATE(idx.ADMITTIME), DAY) AS days_from_admission,
-  (n.HADM_ID = idx.HADM_ID
-   OR n.CHARTDATE BETWEEN DATE(idx.ADMITTIME) AND DATE(idx.DISCHTIME)) AS during_index_stay,
+SELECT idx.HADM_ID AS HADM_ID, n.ROW_ID AS note_id, CAST(n.CHARTDATE AS DATE) AS CHARTDATE,
+  n.HADM_ID AS note_hadm_id,
+  DATE_DIFF(CAST(n.CHARTDATE AS DATE), CAST(idx.ADMITTIME AS DATE), DAY) AS days_from_admission,
+  COALESCE(n.HADM_ID = idx.HADM_ID, FALSE)
+   OR CAST(n.CHARTDATE AS DATE) BETWEEN CAST(idx.ADMITTIME AS DATE)
+                                    AND CAST(idx.DISCHTIME AS DATE) AS during_index_stay,
   n.TEXT AS note_text
 FROM idx
 JOIN `{notes}.noteevents` n ON n.SUBJECT_ID = idx.SUBJECT_ID
 WHERE n.CATEGORY = 'Echo'
-  AND (n.ISERROR IS NULL OR n.ISERROR != 1)
-  AND n.CHARTDATE BETWEEN DATE_SUB(DATE(idx.ADMITTIME), INTERVAL {lookback_days} DAY)
-                      AND DATE(idx.DISCHTIME)
+  -- ISERROR is '1' (STRING) or 1 (INT64) depending on the release
+  AND TRIM(COALESCE(CAST(n.ISERROR AS STRING), '')) NOT IN ('1', '1.0')
+  AND CAST(n.CHARTDATE AS DATE) BETWEEN DATE_SUB(CAST(idx.ADMITTIME AS DATE), INTERVAL {lookback_days} DAY)
+                                    AND CAST(idx.DISCHTIME AS DATE)
 """
 
 

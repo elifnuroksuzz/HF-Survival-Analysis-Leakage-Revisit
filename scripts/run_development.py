@@ -86,10 +86,15 @@ def main(argv=None) -> None:
             rows.append({"model": model, **r})
         save_table(pd.DataFrame(rows).sort_values("mean_diff", ascending=False),
                    "replication_delta_mcc_S1_minus_S2", T)
-        ref = P.data / "reference" / "chicco2020_reported.csv"
+        ref = C.REFERENCE_DIR / "chicco2020_reported.csv"
         if ref.exists():  # user-supplied values transcribed from the paper
             rep = pd.read_csv(ref)
-            save_table(rep.merge(summ, on=["scenario", "model"], how="left"), "replication_vs_published", T)
+            metrics = [c[:-len("_published")] for c in rep.columns if c.endswith("_published")]
+            ours = summ[["scenario", "model"] + [f"{m}_mean" for m in metrics]].rename(
+                columns={f"{m}_mean": f"{m}_ours" for m in metrics})
+            both = rep.merge(ours, on=["scenario", "model"], how="left")
+            cols = ["scenario", "model", "source"] + [c for m in metrics for c in (f"{m}_published", f"{m}_ours")]
+            save_table(both[[c for c in cols if c in both.columns]], "replication_vs_published", T)
         print("[replication] done")
 
     if "leakage" in args.stages:

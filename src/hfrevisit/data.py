@@ -38,11 +38,38 @@ def sha256(path: Path) -> str:
     return h.hexdigest()
 
 
-def download_dataset(dest: Path, url: str = C.UCI_URL) -> Path:
-    """Download the public CSV (UCI mirror). Kaggle users may place it manually."""
+def download_dataset(dest: Path, urls: tuple[str, ...] = C.DATA_URLS) -> Path:
+    """Download the public CSV, trying each mirror until one matches the hash.
+
+    The file is written to a temporary path first, so a failed or wrong
+    download never replaces an existing copy. ZIP archives (UCI's current
+    format) are unpacked.
+    """
+    import io
+    import zipfile
+
     dest.parent.mkdir(parents=True, exist_ok=True)
-    urllib.request.urlretrieve(url, dest)  # noqa: S310 - fixed public URL
-    return dest
+    errors = []
+    for url in urls:
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "hfrevisit/1.0"})
+            with urllib.request.urlopen(req, timeout=60) as r:  # noqa: S310 - fixed public URLs
+                payload = r.read()
+            if payload[:2] == b"PK":
+                with zipfile.ZipFile(io.BytesIO(payload)) as z:
+                    name = next(n for n in z.namelist() if n.endswith(C.DATA_FILE))
+                    payload = z.read(name)
+            if hashlib.sha256(payload).hexdigest() != C.DATA_SHA256:
+                errors.append(f"{url}: SHA-256 mismatch")
+                continue
+            tmp = dest.with_suffix(".part")
+            tmp.write_bytes(payload)
+            tmp.replace(dest)
+            return dest
+        except Exception as exc:  # noqa: BLE001 - try the next mirror
+            errors.append(f"{url}: {exc}")
+    raise RuntimeError("Could not download the dataset from any mirror:\n  " + "\n  ".join(errors)
+                       + f"\nDownload it manually from Kaggle ({C.KAGGLE_DATASET}) to {dest}.")
 
 
 def validate_schema(df: pd.DataFrame) -> None:
